@@ -1,0 +1,245 @@
+{
+  "revision": "worlds-v1",
+  "coordinateSystem": {
+    "origin": "top-left",
+    "width": 1920,
+    "height": 1080,
+    "authoringGrid": 64,
+    "participantRadius": 28,
+    "walkSpeedPerSecond": 250,
+    "chatRadius": 280
+  },
+  "room": {
+    "id": "cafe",
+    "name": "Conversation Café",
+    "bounds": {
+      "x": 120,
+      "y": 90,
+      "width": 1680,
+      "height": 900
+    },
+    "layers": [
+      {
+        "id": "background",
+        "src": "/worlds/cafe/background.svg",
+        "z": 0
+      },
+      {
+        "id": "ground",
+        "src": "/worlds/cafe/ground.svg",
+        "z": 10
+      },
+      {
+        "id": "midground",
+        "src": "/worlds/cafe/midground.svg",
+        "z": 20
+      },
+      {
+        "id": "foreground",
+        "src": "/worlds/cafe/foreground.svg",
+        "z": 40
+      }
+    ],
+    "spawns": [
+      {
+        "id": "from_plaza",
+        "x": 960,
+        "y": 790,
+        "facing": "up"
+      },
+      {
+        "id": "default",
+        "x": 960,
+        "y": 790,
+        "facing": "up"
+      }
+    ],
+    "colliders": [
+      {
+        "id": "counter",
+        "shape": "aabb",
+        "x": 650,
+        "y": 120,
+        "width": 620,
+        "height": 150
+      },
+      {
+        "id": "west-sofa",
+        "shape": "aabb",
+        "x": 170,
+        "y": 380,
+        "width": 260,
+        "height": 120
+      },
+      {
+        "id": "east-sofa",
+        "shape": "aabb",
+        "x": 1490,
+        "y": 380,
+        "width": 260,
+        "height": 120
+      },
+      {
+        "id": "table-west",
+        "shape": "circle",
+        "x": 600,
+        "y": 590,
+        "radius": 105
+      },
+      {
+        "id": "table-center",
+        "shape": "circle",
+        "x": 960,
+        "y": 530,
+        "radius": 110
+      },
+      {
+        "id": "table-east",
+        "shape": "circle",
+        "x": 1320,
+        "y": 590,
+        "radius": 105
+      },
+      {
+        "id": "meeting-board",
+        "shape": "aabb",
+        "x": 1450,
+        "y": 160,
+        "width": 220,
+        "height": 70
+      }
+    ],
+    "portals": [
+      {
+        "id": "cafe_to_plaza",
+        "trigger": {
+          "shape": "aabb",
+          "x": 820,
+          "y": 900,
+          "width": 280,
+          "height": 90
+        },
+        "destination": {
+          "roomId": "plaza",
+          "spawnId": "from_cafe"
+        },
+        "label": "Return to Discovery Plaza",
+        "priority": 100
+      }
+    ],
+    "interactions": [
+      {
+        "id": "cafe_table_west",
+        "anchor": {
+          "x": 600,
+          "y": 740
+        },
+        "radius": 90,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "cafe_west"
+        },
+        "label": "Join west table"
+      },
+      {
+        "id": "cafe_table_center",
+        "anchor": {
+          "x": 960,
+          "y": 680
+        },
+        "radius": 90,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "cafe_center"
+        },
+        "label": "Join center table"
+      },
+      {
+        "id": "cafe_table_east",
+        "anchor": {
+          "x": 1320,
+          "y": 740
+        },
+        "radius": 90,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "cafe_east"
+        },
+        "label": "Join east table"
+      },
+      {
+        "id": "cafe_meeting_board",
+        "anchor": {
+          "x": 1415,
+          "y": 250
+        },
+        "radius": 110,
+        "priority": 70,
+        "action": {
+          "type": "open_panel",
+          "panel": "nearby_chat_guide"
+        },
+        "label": "Read meeting guide"
+      },
+      {
+        "id": "cafe_counter",
+        "anchor": {
+          "x": 960,
+          "y": 330
+        },
+        "radius": 110,
+        "priority": 40,
+        "action": {
+          "type": "open_panel",
+          "panel": "cafe_info"
+        },
+        "label": "Visit café counter"
+      },
+      {
+        "id": "cafe_table_west_second",
+        "anchor": {
+          "x": 510,
+          "y": 740
+        },
+        "radius": 90,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "cafe_west"
+        },
+        "label": "Join west table"
+      },
+      {
+        "id": "cafe_table_center_second",
+        "anchor": {
+          "x": 870,
+          "y": 680
+        },
+        "radius": 90,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "cafe_center"
+        },
+        "label": "Join center table"
+      },
+      {
+        "id": "cafe_table_east_second",
+        "anchor": {
+          "x": 1230,
+          "y": 740
+        },
+        "radius": 90,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "cafe_east"
+        },
+        "label": "Join east table"
+      }
+    ]
+  }
+}

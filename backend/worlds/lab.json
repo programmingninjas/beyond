@@ -1,0 +1,197 @@
+{
+  "revision": "worlds-v1",
+  "coordinateSystem": {
+    "origin": "top-left",
+    "width": 1920,
+    "height": 1080,
+    "authoringGrid": 64,
+    "participantRadius": 28,
+    "walkSpeedPerSecond": 250,
+    "chatRadius": 280
+  },
+  "room": {
+    "id": "lab",
+    "name": "Idea Lab",
+    "bounds": {
+      "x": 120,
+      "y": 90,
+      "width": 1680,
+      "height": 900
+    },
+    "layers": [
+      {
+        "id": "background",
+        "src": "/worlds/lab/background.svg",
+        "z": 0
+      },
+      {
+        "id": "ground",
+        "src": "/worlds/lab/ground.svg",
+        "z": 10
+      },
+      {
+        "id": "midground",
+        "src": "/worlds/lab/midground.svg",
+        "z": 20
+      },
+      {
+        "id": "foreground",
+        "src": "/worlds/lab/foreground.svg",
+        "z": 40
+      }
+    ],
+    "spawns": [
+      {
+        "id": "from_plaza",
+        "x": 1530,
+        "y": 760,
+        "facing": "up"
+      },
+      {
+        "id": "default",
+        "x": 1530,
+        "y": 760,
+        "facing": "up"
+      }
+    ],
+    "colliders": [
+      {
+        "id": "project-board",
+        "shape": "aabb",
+        "x": 680,
+        "y": 110,
+        "width": 560,
+        "height": 90
+      },
+      {
+        "id": "whiteboard",
+        "shape": "aabb",
+        "x": 160,
+        "y": 250,
+        "width": 260,
+        "height": 80
+      },
+      {
+        "id": "idea-shelves",
+        "shape": "aabb",
+        "x": 1500,
+        "y": 230,
+        "width": 240,
+        "height": 310
+      },
+      {
+        "id": "table-main",
+        "shape": "aabb",
+        "x": 680,
+        "y": 430,
+        "width": 560,
+        "height": 180
+      },
+      {
+        "id": "table-round",
+        "shape": "circle",
+        "x": 1360,
+        "y": 680,
+        "radius": 120
+      },
+      {
+        "id": "soft-seating",
+        "shape": "aabb",
+        "x": 220,
+        "y": 680,
+        "width": 280,
+        "height": 130
+      }
+    ],
+    "portals": [
+      {
+        "id": "lab_to_plaza",
+        "trigger": {
+          "shape": "aabb",
+          "x": 1490,
+          "y": 900,
+          "width": 250,
+          "height": 90
+        },
+        "destination": {
+          "roomId": "plaza",
+          "spawnId": "from_lab"
+        },
+        "label": "Return to Discovery Plaza",
+        "priority": 100
+      }
+    ],
+    "interactions": [
+      {
+        "id": "lab_project_board",
+        "anchor": {
+          "x": 960,
+          "y": 275
+        },
+        "radius": 120,
+        "priority": 80,
+        "action": {
+          "type": "open_panel",
+          "panel": "project_board"
+        },
+        "label": "View project board"
+      },
+      {
+        "id": "lab_whiteboard",
+        "anchor": {
+          "x": 450,
+          "y": 290
+        },
+        "radius": 105,
+        "priority": 60,
+        "action": {
+          "type": "open_panel",
+          "panel": "whiteboard_placeholder"
+        },
+        "label": "View whiteboard"
+      },
+      {
+        "id": "lab_idea_shelf",
+        "anchor": {
+          "x": 1430,
+          "y": 410
+        },
+        "radius": 105,
+        "priority": 50,
+        "action": {
+          "type": "open_panel",
+          "panel": "idea_shelf"
+        },
+        "label": "Browse idea shelf"
+      },
+      {
+        "id": "lab_table_main",
+        "anchor": {
+          "x": 960,
+          "y": 700
+        },
+        "radius": 100,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "lab_main"
+        },
+        "label": "Join collaboration table"
+      },
+      {
+        "id": "lab_table_round",
+        "anchor": {
+          "x": 1360,
+          "y": 840
+        },
+        "radius": 90,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "lab_round"
+        },
+        "label": "Join discussion table"
+      }
+    ]
+  }
+}

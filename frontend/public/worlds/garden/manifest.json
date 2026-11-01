@@ -1,0 +1,47 @@
+{
+  "roomId": "garden",
+  "label": "Connection Garden",
+  "coordinateSpace": [
+    1920,
+    1080
+  ],
+  "layers": [
+    {
+      "id": "background",
+      "file": "background.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "613099db023683865312e2072b4b7b7617fc851f58cfadddc4bdd0c971d0475a",
+      "placeholder": true,
+      "z": 0
+    },
+    {
+      "id": "ground",
+      "file": "ground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "703fa76096c5d4432eb46056b1316456f3ac7031d37679cdfb118b983354361d",
+      "placeholder": true,
+      "z": 10
+    },
+    {
+      "id": "midground",
+      "file": "midground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "3ba7cf6f0e453725ec324a37fe4226930fc8b9ac70a9574b184a17595845a332",
+      "placeholder": true,
+      "z": 20
+    },
+    {
+      "id": "foreground",
+      "file": "foreground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "bba21205d7025dfde1755f6b7310714986d98ef5aa81ed036517eca1e50a3e06",
+      "placeholder": true,
+      "z": 40
+    }
+  ],
+  "source": "Engineering placeholder; replace file content without changing room or layer IDs."
+}

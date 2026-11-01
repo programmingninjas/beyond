@@ -1,0 +1,47 @@
+{
+  "roomId": "cafe",
+  "label": "Conversation Caf\u00e9",
+  "coordinateSpace": [
+    1920,
+    1080
+  ],
+  "layers": [
+    {
+      "id": "background",
+      "file": "background.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "f06f2d1edd6dc393069735adf1334912be2d317a9da3d7082983a23cb32f04c6",
+      "placeholder": true,
+      "z": 0
+    },
+    {
+      "id": "ground",
+      "file": "ground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "a318cf31da6973574ccc3e23747c07caae882f71b2a4210dbe83ef8cd4b8b9e0",
+      "placeholder": true,
+      "z": 10
+    },
+    {
+      "id": "midground",
+      "file": "midground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "2f2083a590347a4b80bdc1babf8030dcce593e08cc05b8f15f795dc3ce19b2e6",
+      "placeholder": true,
+      "z": 20
+    },
+    {
+      "id": "foreground",
+      "file": "foreground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "63ba0dad42c377b77c01235a8455db91b25e5b6a32e719cb6c43867a5e24d9ab",
+      "placeholder": true,
+      "z": 40
+    }
+  ],
+  "source": "Engineering placeholder; replace file content without changing room or layer IDs."
+}

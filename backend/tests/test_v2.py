@@ -114,7 +114,8 @@ def test_matching_and_conversation_are_cached_and_authorized(client, monkeypatch
     assert len(calls)==2
 
 
-def test_room_transition_is_event_scoped(client):
+def test_room_transition_is_event_scoped(client, monkeypatch):
+    monkeypatch.setenv('WORLD_DEBUG_ROOM_TABS', '1')
     token=client.post('/auth/signup',json={'name':'alex','email':'alex@example.com','password':'testpassword'}).json()['token']
     auth={'Authorization':'Bearer '+token}
     start=datetime.now(timezone.utc)+timedelta(days=1)
@@ -126,3 +127,101 @@ def test_room_transition_is_event_scoped(client):
         ws.send_json({'type':'room','room_id':'garden'})
         assert ws.receive_json()['room_id']=='garden'
         assert ws.receive_json()['participants'][0]['room_id']=='garden'
+
+
+def _eligible_room(client, name='world-user'):
+    token=client.post('/auth/signup',json={'name':name,'email':f'{name}@example.com','password':'testpassword'}).json()['token']
+    auth={'Authorization':'Bearer '+token}
+    start=datetime.now(timezone.utc)+timedelta(days=1)
+    event=client.post('/events',headers=auth,json={'title':'World test','description':'A test event','starts_at':start.isoformat(),'ends_at':(start+timedelta(hours=1)).isoformat(),'published':True}).json()['id']
+    client.post(f'/events/{event}/register',headers=auth)
+    client.post(f'/events/{event}/quiz/submit',headers=auth,json={'answers':[0,0,0]})
+    return event,token
+
+
+def test_world_config_endpoint_and_authoritative_geometry(client):
+    import world
+    response=client.get('/worlds')
+    assert response.status_code==200
+    data=response.json()
+    assert data['revision']=='worlds-v1'
+    assert {r['id'] for r in data['rooms']}=={'plaza','cafe','garden','arcade','lab'}
+    assert client.get('/worlds/not-a-world').status_code==404
+    thin_wall={'id':'thin','shape':'aabb','x':500,'y':100,'width':32,'height':800}
+    room={'bounds':{'x':0,'y':0,'width':1000,'height':1000},'colliders':[thin_wall]}
+    x,y=world.swept_move(room,(200,500),(800,500))
+    assert x<=472 and y==500
+    assert world.CHAT_RADIUS==280
+
+
+def test_spatial_portal_uses_server_destination_and_spawn(client, monkeypatch):
+    import time
+    monkeypatch.setenv('WORLD_DEBUG_ROOM_TABS','1')
+    event,token=_eligible_room(client,'portal-user')
+    with client.websocket_connect(f'/ws/events/{event}?token={token}') as ws:
+        presence=ws.receive_json()
+        assert presence['world_revision']=='worlds-v1'
+        person=presence['participants'][0]
+        assert (person['x'],person['y'])==(960,884)
+        ws.send_json({'type':'room','room_id':'lab'})
+        changed=ws.receive_json()
+        assert changed['room_id']=='lab' and changed['spawn_id']=='default'
+        ws.receive_json()  # room-scoped presence after the debug-only transition
+        time.sleep(.5)
+        ws.send_json({'type':'move','seq':1,'x':1530,'y':860,'direction':'down','walking':True})
+        assert ws.receive_json()['type']=='position'
+        ws.receive_json()  # room-scoped presence
+        ws.send_json({'type':'portal_enter','portal_id':'lab_to_plaza'})
+        changed=ws.receive_json()
+        assert changed['type']=='room_changed'
+        assert changed['room_id']=='plaza' and changed['spawn_id']=='from_lab'
+        assert (changed['x'],changed['y'])==(1450,820)
+
+
+def test_production_socket_rejects_room_tabs_and_remote_movement(client, monkeypatch):
+    monkeypatch.delenv('WORLD_DEBUG_ROOM_TABS',raising=False)
+    event,token=_eligible_room(client,'secure-room-user')
+    with client.websocket_connect(f'/ws/events/{event}?token={token}') as ws:
+        ws.receive_json()
+        ws.send_json({'type':'room','room_id':'garden'})
+        ws.send_json({'type':'portal_enter','portal_id':'garden_to_plaza'})
+        error=ws.receive_json()
+        assert error['type']=='world_error' and error['code']=='portal_out_of_range'
+        ws.send_json({'type':'move','seq':6,'x':1100,'y':884,'direction':'right','walking':True})
+        too_fast=ws.receive_json()
+        assert too_fast['type']=='position' and too_fast['accepted'] is False
+        ws.receive_json()  # unchanged presence
+        ws.send_json({'type':'move','seq':7,'x':float('nan'),'y':884,'direction':'up','walking':True})
+        invalid=ws.receive_json()
+        assert invalid['type']=='position' and invalid['accepted'] is False
+        ws.send_json({'type':'move','seq':8,'x':9000,'y':9000,'direction':'up','walking':True})
+        position=ws.receive_json()
+        assert position['type']=='position' and position['accepted'] is False
+        assert (position['x'],position['y'])==(960,884)
+
+
+def test_nearby_chat_remains_private_proximity_and_block_gated(client):
+    event,alice_token=_eligible_room(client,'nearby-alice')
+    bob_token=client.post('/auth/signup',json={'name':'nearby-bob','email':'nearby-bob@example.com','password':'testpassword'}).json()['token']
+    bob_auth={'Authorization':'Bearer '+bob_token}
+    client.post(f'/events/{event}/register',headers=bob_auth)
+    client.post(f'/events/{event}/quiz/submit',headers=bob_auth,json={'answers':[0,0,0]})
+    alice_auth={'Authorization':'Bearer '+alice_token}
+    bob_id=client.get('/me',headers=bob_auth).json()['id']
+    from main import rooms
+    with client.websocket_connect(f'/ws/events/{event}?token={alice_token}') as alice:
+        alice.receive_json()
+        with client.websocket_connect(f'/ws/events/{event}?token={bob_token}') as bob:
+            alice.receive_json(); bob.receive_json()
+            alice.send_json({'type':'chat','target_id':bob_id,'text':'Hello there'})
+            assert alice.receive_json()['type']=='chat'
+            assert bob.receive_json()['text']=='Hello there'
+            bob_presence=next(p for p in rooms[event].values() if p['id']==bob_id)
+            bob_presence['x']=1500
+            alice.send_json({'type':'chat','target_id':bob_id,'text':'Too far'})
+            assert alice.receive_json()['type']=='chat_error'
+            bob_presence['x']=888
+            assert client.post(f'/v2/blocks/{bob_id}',headers=alice_auth).status_code==200
+            alice.send_json({'type':'chat','target_id':bob_id,'text':'Blocked'})
+            error=alice.receive_json()
+            assert error['type']=='chat_error' and error['message']=='Participant unavailable.'
