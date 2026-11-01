@@ -25,7 +25,11 @@ services:
       db:
         condition: service_healthy
   web:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_WORLD_ROOM_TABS: ${NEXT_PUBLIC_WORLD_ROOM_TABS:-0}
+        NEXT_PUBLIC_WORLD_DEBUG: ${NEXT_PUBLIC_WORLD_DEBUG:-0}
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
     ports: ["3000:3000"]
