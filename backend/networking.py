@@ -9,6 +9,13 @@ from sqlalchemy.orm import Mapped, Session, mapped_column
 from ai_service import generate, Match, PetConversation
 
 
+def circle_for_score(score):
+    if score > 80: return 'inner'
+    if score > 60: return 'shared'
+    if score > 40: return 'perspectives'
+    return 'serendipity'
+
+
 def install(app, Base, SessionLocal, current_user, User, Event, Registration, Connection, Profile, Persona, Block, Introduction):
     class Job(Base):
         __tablename__ = 'v2_jobs'
@@ -45,12 +52,12 @@ def install(app, Base, SessionLocal, current_user, User, Event, Registration, Co
         return db.query(Block).filter(or_((Block.user_id == a) & (Block.other_id == b), (Block.user_id == b) & (Block.other_id == a))).first() is not None
     def eligible(db, event, uid):
         e = db.get(Event, event); reg = db.query(Registration).filter_by(event_id=event, user_id=uid).first()
-        if not e or not e.published or not reg or not reg.personality: raise HTTPException(403, 'Complete event registration and quiz first')
+        if not e or not e.published or not reg: raise HTTPException(403, 'Register for the event first')
         return reg
     def context(db, event, uid):
         user = db.get(User, uid); profile = db.get(Profile, uid); persona = db.query(Persona).filter_by(event_id=event, user_id=uid).first()
         reg = db.query(Registration).filter_by(event_id=event, user_id=uid).first()
-        return {'name': user.name, 'bio': user.bio, 'interests': user.interests, **(profile.data if profile else {}), **(persona.data if persona else {}), 'quiz_result': reg.personality if reg else ''}
+        return {'name': user.name, 'bio': user.bio, 'interests': user.interests, **({k:v for k,v in profile.data.items() if k not in ('phone', 'personality_result', 'enrichment_sources', 'pet_sharing')} if profile else {}), **(persona.data if persona else {}), 'quiz_result': (profile.data or {}).get('personality_result', '') if profile else ''}
     def queue(db, kind, event, uid, target=0):
         job = db.query(Job).filter_by(kind=kind, event_id=event, user_id=uid, target_id=target).filter(Job.state.in_(['pending','running'])).first()
         if not job:
@@ -71,7 +78,7 @@ def install(app, Base, SessionLocal, current_user, User, Event, Registration, Co
         event=db.get(Event,event_id)
         if not event or event.owner_id != user.id: raise HTTPException(403,'Only the event organizer can refresh everyone')
         jobs=[]
-        for reg in db.query(Registration).filter_by(event_id=event_id).filter(Registration.personality.is_not(None)).all():
+        for reg in db.query(Registration).filter_by(event_id=event_id).all():
             jobs.append(job_data(queue(db,'matching',event_id,reg.user_id)))
         return {'jobs':jobs}
     @app.get('/v2/events/{event_id}/matching')
@@ -84,12 +91,12 @@ def install(app, Base, SessionLocal, current_user, User, Event, Registration, Co
             if not other or (p and not p.discoverable) or block(db,user.id,other.id): continue
             try: eligible(db,event_id,other.id)
             except HTTPException: continue
-            result.append({'id':other.id,'name':other.name,'bio':other.bio,'avatar':(p.data.get('avatar','red-panda') if p else 'red-panda'), **row.data, 'calculated_at':row.created_at.isoformat()})
+            result.append({'id':other.id,'name':other.name,'bio':other.bio,'avatar':(p.data.get('avatar','red-panda') if p else 'red-panda'), **row.data, 'circle':circle_for_score(row.data['score']), 'calculated_at':row.created_at.isoformat()})
         return {'job':job_data(job) if job else None, 'matches':sorted(result,key=lambda x:-x['score'])}
     @app.get('/v2/events/{event_id}/directory')
     def directory(event_id: int, user: User = Depends(current_user), db: Session = Depends(session)):
         eligible(db,event_id,user.id); result=[]
-        for reg in db.query(Registration).filter_by(event_id=event_id).filter(Registration.user_id != user.id, Registration.personality.is_not(None)).all():
+        for reg in db.query(Registration).filter_by(event_id=event_id).filter(Registration.user_id != user.id).all():
             p = db.get(Profile,reg.user_id); other = db.get(User,reg.user_id)
             if other and not (p and not p.discoverable) and not block(db,user.id,other.id): result.append({'id':other.id,'name':other.name,'bio':other.bio})
         return result
@@ -132,15 +139,14 @@ def install(app, Base, SessionLocal, current_user, User, Event, Registration, Co
                 if job.kind=='matching':
                     eligible(db,job.event_id,job.user_id)
                     own=context(db,job.event_id,job.user_id); rows=[]; snapshots={job.user_id: own}
-                    regs=db.query(Registration).filter_by(event_id=job.event_id).filter(Registration.user_id != job.user_id,Registration.personality.is_not(None)).limit(50).all()
+                    regs=db.query(Registration).filter_by(event_id=job.event_id).filter(Registration.user_id != job.user_id).all()
                     for reg in regs:
                         p=db.get(Profile,reg.user_id)
                         if (p and not p.discoverable) or block(db,job.user_id,reg.user_id): continue
                         candidate=context(db,job.event_id,reg.user_id); snapshots[reg.user_id]=candidate
-                        match,meta=generate(Match,'Assess the networking relationship. Assign one circle based on evidence, not score. Scores 0-100 in order: goals, needs and offerings, shared interests, collaboration, event relevance. Give evidence and an honest reason. Avoid recommending unsupported relationships.',{'viewer':own,'candidate':candidate})
+                        match,meta=generate(Match,'Assess the networking relationship. Scores 0-100 in order: goals, needs and offerings, shared interests, collaboration, event relevance. Give evidence and an honest reason. Avoid recommending unsupported relationships.',{'viewer':own,'candidate':candidate})
                         score=round(sum(a*b for a,b in zip(match.scores,[.25,.30,.20,.15,.10])))
-                        if score < 25: continue
-                        rows.append(Recommendation(event_id=job.event_id,user_id=job.user_id,candidate_id=reg.user_id,data={**match.model_dump(),'score':score,'model':meta['model'],'usage':meta['usage']}))
+                        rows.append(Recommendation(event_id=job.event_id,user_id=job.user_id,candidate_id=reg.user_id,data={**match.model_dump(),'score':score,'circle':circle_for_score(score),'model':meta['model'],'usage':meta['usage']}))
                     db.expire_all()
                     if any(context(db,job.event_id,uid) != original for uid,original in snapshots.items()): raise RuntimeError('Profiles changed during matching; please refresh')
                     db.query(Recommendation).filter_by(event_id=job.event_id,user_id=job.user_id).delete()

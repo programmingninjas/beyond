@@ -42,6 +42,13 @@ def install(app, Base, db_session, current_user, User, Event, Registration, Conn
         created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     class ProfileInput(BaseModel):
+        phone: str = Field(default='', max_length=40)
+        projects: str = Field(default='', max_length=2000)
+        experience: str = Field(default='', max_length=2000)
+        achievements: str = Field(default='', max_length=2000)
+        website: str = Field(default='', max_length=500)
+        additional_social: str = Field(default='', max_length=1000)
+        networking_goals: str = Field(default='', max_length=2000)
         headline: str = Field(default='', max_length=200)
         role: str = Field(default='', max_length=200)
         organization: str = Field(default='', max_length=200)
@@ -62,13 +69,16 @@ def install(app, Base, db_session, current_user, User, Event, Registration, Conn
         topics: str = Field(default='', max_length=2000)
 
     class ShareInput(BaseModel):
+        fields: list[Literal['name', 'bio', 'interests', 'headline', 'role', 'organization', 'skills', 'expertise', 'industry', 'attending', 'seeking', 'offering', 'projects', 'topics']] = Field(default_factory=list, max_length=15)
+
+    class PetSharingInput(BaseModel):
         fields: list[Literal['name', 'bio', 'interests', 'headline', 'role', 'organization', 'skills', 'expertise', 'industry', 'attending', 'seeking', 'offering', 'projects', 'topics']] = Field(max_length=15)
 
     def eligible(db, event_id, user_id):
         event = db.get(Event, event_id)
         reg = db.query(Registration).filter_by(event_id=event_id, user_id=user_id).first()
-        if not event or not event.published or not reg or not reg.personality:
-            raise HTTPException(403, 'Register and complete the event quiz first')
+        if not event or not event.published or not reg:
+            raise HTTPException(403, 'Register for the event first')
         return reg
 
     def blocked(db, first, second):
@@ -77,16 +87,42 @@ def install(app, Base, db_session, current_user, User, Event, Registration, Conn
     @app.get('/v2/profile')
     def get_profile(user: User = Depends(current_user), db: Session = Depends(db_session)):
         row = db.get(Profile, user.id)
-        return {**ProfileInput().model_dump(), **(row.data if row else {}), 'discoverable': row.discoverable if row else True}
+        from profile_rules import completion
+        data = row.data if row else {}
+        return {**ProfileInput().model_dump(), **data, 'discoverable': row.discoverable if row else True, 'completion': completion(user, data)}
 
     @app.put('/v2/profile')
     def put_profile(body: ProfileInput, user: User = Depends(current_user), db: Session = Depends(db_session)):
         row = db.get(Profile, user.id)
         if not row:
             row = Profile(user_id=user.id); db.add(row)
-        row.data = body.model_dump(exclude={'discoverable'}); row.discoverable = body.discoverable
+        previous = row.data or {}
+        updated = body.model_dump(exclude={'discoverable'})
+        sources = dict(previous.get('enrichment_sources') or {})
+        for key in updated:
+            if key in sources and updated[key] != previous.get(key, ''): sources.pop(key, None)
+        updated['enrichment_sources'] = sources
+        if previous.get('personality_result'): updated['personality_result'] = previous['personality_result']
+        if previous.get('pet_sharing') is not None: updated['pet_sharing'] = previous['pet_sharing']
+        row.data = updated; row.discoverable = body.discoverable
         db.commit()
         return body.model_dump()
+
+    @app.get('/v2/profile/pet-sharing')
+    def get_pet_sharing(user: User = Depends(current_user), db: Session = Depends(db_session)):
+        row = db.get(Profile, user.id)
+        return {'fields': (row.data or {}).get('pet_sharing', ['name']) if row else ['name']}
+
+    @app.put('/v2/profile/pet-sharing')
+    def put_pet_sharing(body: PetSharingInput, user: User = Depends(current_user), db: Session = Depends(db_session)):
+        row = db.get(Profile, user.id)
+        if not row:
+            row = Profile(user_id=user.id, data={}); db.add(row)
+        data = dict(row.data or {})
+        data['pet_sharing'] = list(dict.fromkeys(body.fields))
+        row.data = data
+        db.commit()
+        return {'fields': data['pet_sharing']}
 
     @app.get('/v2/events/{event_id}/persona')
     def get_persona(event_id: int, user: User = Depends(current_user), db: Session = Depends(db_session)):
@@ -118,7 +154,9 @@ def install(app, Base, db_session, current_user, User, Event, Registration, Conn
         if other_id == user.id or blocked(db, user.id, other_id) or (other_profile and not other_profile.discoverable): raise HTTPException(403, 'Participant unavailable')
         existing = db.query(Introduction).filter_by(event_id=event_id).filter(or_((Introduction.requester_id == user.id) & (Introduction.recipient_id == other_id), (Introduction.requester_id == other_id) & (Introduction.recipient_id == user.id)), Introduction.state.in_(['pending', 'approved'])).first()
         if existing: raise HTTPException(409, 'An introduction is already pending')
-        row = Introduction(event_id=event_id, requester_id=user.id, recipient_id=other_id, requester_sharing=body.fields, recipient_sharing=[], state='pending')
+        requester_profile = db.get(Profile, user.id)
+        allowed_fields = (requester_profile.data or {}).get('pet_sharing', ['name']) if requester_profile else ['name']
+        row = Introduction(event_id=event_id, requester_id=user.id, recipient_id=other_id, requester_sharing=allowed_fields, recipient_sharing=[], state='pending')
         db.add(row); db.commit(); db.refresh(row); return {'id': row.id, 'state': row.state}
 
     @app.get('/v2/introductions')
@@ -132,6 +170,9 @@ def install(app, Base, db_session, current_user, User, Event, Registration, Conn
         if not row or row.recipient_id != user.id: raise HTTPException(404, 'Introduction not found')
         if row.state != 'pending' or blocked(db, row.requester_id, row.recipient_id): raise HTTPException(409, 'Introduction is no longer pending')
         eligible(db, row.event_id, row.requester_id); eligible(db, row.event_id, row.recipient_id)
+        profile = db.get(Profile, user.id)
+        allowed_fields = (profile.data or {}).get('pet_sharing', ['name']) if profile else ['name']
+        if not set(body.fields).issubset(allowed_fields): raise HTTPException(422, 'You can only share fields enabled in your pet sharing settings')
         row.recipient_sharing = body.fields; row.state = 'approved'; db.commit()
         return {'state': row.state, 'message': 'Consent recorded. Either owner can start the pet conversation.'}
 

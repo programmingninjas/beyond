@@ -7,7 +7,7 @@ versions = Table('schema_versions', metadata, Column('version', Integer, primary
 
 def migrate(engine, base, v2_tables):
     # Existing unversioned MVP databases are adopted without changing their rows.
-    legacy = [table for table in base.metadata.sorted_tables if table.name not in v2_tables and table.name not in ('v2_jobs', 'v2_recommendations', 'v2_transcripts')]
+    legacy = [table for table in base.metadata.sorted_tables if table.name not in v2_tables and table.name not in ('v2_jobs', 'v2_recommendations', 'v2_transcripts', 'event_registration_fields', 'event_registration_answers')]
     base.metadata.create_all(engine, tables=legacy)
     metadata.create_all(engine)
     with engine.begin() as connection:
@@ -16,5 +16,9 @@ def migrate(engine, base, v2_tables):
             base.metadata.create_all(connection, tables=[base.metadata.tables[name] for name in v2_tables])
             connection.execute(versions.insert().values(version=1))
         if 2 not in applied:
-            base.metadata.create_all(connection, tables=[base.metadata.tables[name] for name in ('v2_jobs', 'v2_recommendations', 'v2_transcripts')])
+            base.metadata.create_all(connection, tables=[base.metadata.tables[name] for name in ('v2_jobs', 'v2_recommendations', 'v2_transcripts', 'event_registration_fields', 'event_registration_answers')])
             connection.execute(versions.insert().values(version=2))
+
+        if 3 not in applied:
+            base.metadata.create_all(connection, tables=[base.metadata.tables[name] for name in ('event_registration_fields', 'event_registration_answers')])
+            connection.execute(versions.insert().values(version=3))

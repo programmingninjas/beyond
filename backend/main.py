@@ -51,6 +51,14 @@ class Registration(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
     event_id: Mapped[int] = mapped_column(ForeignKey('events.id'))
     personality: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+class EventFields(Base):
+    __tablename__ = 'event_registration_fields'
+    event_id: Mapped[int] = mapped_column(ForeignKey('events.id'), primary_key=True)
+    fields: Mapped[list] = mapped_column(JSON, default=list)
+class RegistrationAnswers(Base):
+    __tablename__ = 'event_registration_answers'
+    registration_id: Mapped[int] = mapped_column(ForeignKey('registrations.id'), primary_key=True)
+    answers: Mapped[dict] = mapped_column(JSON, default=dict)
 class Connection(Base):
     __tablename__ = 'connections'
     __table_args__ = (UniqueConstraint('low_id', 'high_id'),)
@@ -67,10 +75,19 @@ class Message(Base):
     text: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
-TEMPLATE = {'personalities': ['Explorer', 'Connector', 'Thinker'], 'questions': [
-    {'question': 'What are you most excited to find at an event?', 'options': [{'text': 'Fresh ideas', 'personality': 'Explorer'}, {'text': 'New people', 'personality': 'Connector'}, {'text': 'Deeper insights', 'personality': 'Thinker'}]},
-    {'question': 'How do you usually start a conversation?', 'options': [{'text': 'Ask about something unexpected', 'personality': 'Explorer'}, {'text': 'Introduce myself to the group', 'personality': 'Connector'}, {'text': 'Ask a thoughtful question', 'personality': 'Thinker'}]},
-    {'question': 'What makes a gathering memorable?', 'options': [{'text': 'Discovering a new perspective', 'personality': 'Explorer'}, {'text': 'Making a meaningful connection', 'personality': 'Connector'}, {'text': 'Learning something useful', 'personality': 'Thinker'}]}]}
+PERSONALITIES = ['Adventurer', 'Innovator', 'Mystic', 'Synergist']
+TEMPLATE = {'personalities': PERSONALITIES, 'questions': [
+    {'question': 'At a party, you tend to:', 'options': [{'text': 'Mingle with a large group.'}, {'text': 'Find a small group to have a deep conversation with.'}, {'text': 'Observe the party from the sidelines.'}, {'text': 'Take center stage and entertain everyone.'}]},
+    {'question': 'When making a decision, you:', 'options': [{'text': 'Weigh the pros and cons carefully.'}, {'text': 'Trust your gut feeling and intuition.'}, {'text': 'Seek advice from others.'}, {'text': 'Like to have all the information before making a choice.'}]},
+    {'question': 'Your ideal Saturday morning involves:', 'options': [{'text': 'A bustling activity with friends or family.'}, {'text': 'Learning a new skill or tackling a creative project.'}, {'text': 'Quiet relaxation and reflection.'}, {'text': 'A spontaneous adventure or trying something new.'}]},
+    {'question': 'You would describe yourself as:', 'options': [{'text': 'Outgoing and sociable.'}, {'text': 'Curious and imaginative.'}, {'text': 'Reserved and introspective.'}, {'text': 'Energetic and enthusiastic.'}]},
+    {'question': 'In a disagreement, you prefer to:', 'options': [{'text': 'Debate the issue and find a common ground.'}, {'text': 'Offer a creative solution that satisfies everyone.'}, {'text': 'Avoid conflict altogether.'}, {'text': 'Assert your position and win the argument.'}]},
+    {'question': 'What motivates you the most?', 'options': [{'text': 'Recognition and praise from others.'}, {'text': 'Learning and personal growth.'}, {'text': 'Inner peace and harmony.'}, {'text': 'New experiences and challenges.'}]},
+    {'question': 'You get lost in a book that is:', 'options': [{'text': 'A thrilling adventure story.'}, {'text': 'A thought-provoking exploration of ideas.'}, {'text': 'A heartwarming and emotional story.'}, {'text': 'A funny and lighthearted read.'}]},
+]}
+for question in TEMPLATE['questions']:
+    for index, option in enumerate(question['options']):
+        option['personality'] = PERSONALITIES[index]
 
 def db_session():
     with SessionLocal() as db: yield db
@@ -90,7 +107,7 @@ def public_user(u): return {'id': u.id, 'name': u.name, 'bio': u.bio, 'interests
 def event_data(e, db, user=None):
     reg = db.query(Registration).filter_by(event_id=e.id, user_id=user.id).first() if user else None
     owner = db.get(User, e.owner_id)
-    return {'id': e.id, 'owner_id': e.owner_id, 'organizer': owner.name if owner else 'Organizer', 'title': e.title, 'description': e.description, 'category': e.category, 'location': e.location, 'starts_at': aware(e.starts_at).isoformat(), 'ends_at': aware(e.ends_at).isoformat(), 'published': e.published, 'registered': bool(reg), 'personality': reg.personality if reg else None, 'attendees': db.query(Registration).filter_by(event_id=e.id).count()}
+    return {'id': e.id, 'owner_id': e.owner_id, 'organizer': owner.name if owner else 'Organizer', 'title': e.title, 'description': e.description, 'category': e.category, 'location': e.location, 'starts_at': aware(e.starts_at).isoformat(), 'ends_at': aware(e.ends_at).isoformat(), 'published': e.published, 'registered': bool(reg), 'attendees': db.query(Registration).filter_by(event_id=e.id).count()}
 def event_or_404(db, event_id):
     event = db.get(Event, event_id)
     if not event: raise HTTPException(404, 'Event not found')
@@ -100,24 +117,13 @@ def owner_event(db, event_id, user):
     if event.owner_id != user.id: raise HTTPException(403, 'Only the organizer can manage this event')
     return event
 def registration(db, event_id, user_id): return db.query(Registration).filter_by(event_id=event_id, user_id=user_id).first()
-def validate_quiz(q):
-    if not isinstance(q, dict) or not isinstance(q.get('personalities'), list) or not isinstance(q.get('questions'), list): raise HTTPException(422, 'Quiz needs personalities and questions')
-    types = q['personalities']
-    if not types or len(types) > 20 or any(not isinstance(t, str) or not t.strip() or len(t) > 100 for t in types) or len(set(types)) != len(types): raise HTTPException(422, 'Personality names must be unique, nonempty strings')
-    if not 1 <= len(q['questions']) <= 30: raise HTTPException(422, 'Quiz needs 1–30 questions')
-    for question in q['questions']:
-        if not isinstance(question, dict) or not isinstance(question.get('question'), str) or not question['question'].strip() or not isinstance(question.get('options'), list) or not 2 <= len(question['options']) <= 10: raise HTTPException(422, 'Each question needs text and 2–10 options')
-        for option in question['options']:
-            if not isinstance(option, dict) or not isinstance(option.get('text'), str) or not option['text'].strip() or option.get('personality') not in types: raise HTTPException(422, 'Each option needs text and a valid personality')
-    return q
-
 class AuthInput(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     name: str = Field(default='', max_length=100)
 class ProfileInput(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    bio: str = Field(default='', max_length=2000)
+    bio: str = Field(default='', max_length=1000)
     interests: str = Field(default='', max_length=500)
     profile_url: str = Field(default='', max_length=500)
     enrichment_consent: bool = False
@@ -129,7 +135,11 @@ class EventInput(BaseModel):
     starts_at: datetime
     ends_at: datetime
     published: bool = False
-class QuizInput(BaseModel): quiz: dict[str, Any]
+class ExtraField(BaseModel):
+    label: str = Field(min_length=1, max_length=200)
+    required: bool = False
+class ExtraFieldsInput(BaseModel): fields: list[ExtraField] = Field(max_length=20)
+class RegistrationInput(BaseModel): answers: dict[str, str] = Field(default_factory=dict)
 class AnswersInput(BaseModel): answers: list[int]
 class TextInput(BaseModel): text: str = Field(min_length=1, max_length=2000)
 
@@ -145,18 +155,17 @@ async def publish_changes(request, call_next):
     path = request.url.path
     # Invalidate event-wide caches on changes that can affect either side of a match.
     persona_match = re.fullmatch(r'/v2/events/(\d+)/persona', path)
-    quiz_match = re.fullmatch(r'/events/(\d+)/quiz/submit', path)
-    if response.status_code < 400 and ((request.method == 'PUT' and (path in ('/me', '/v2/profile') or persona_match)) or (request.method == 'POST' and quiz_match)):
+    if response.status_code < 400 and ((request.method == 'PUT' and (path in ('/me', '/v2/profile') or persona_match)) or (request.method == 'POST' and (path in ('/profile/personality-quiz', '/v2/profile/enrichment/apply') or re.fullmatch(r'/events/\d+/register',path)))):
         auth = request.headers.get('authorization', '')
         if auth.startswith('Bearer '):
             with SessionLocal() as db:
                 try:
                     u = get_user(auth[7:], db)
-                    event_ids = [int((persona_match or quiz_match).group(1))] if (persona_match or quiz_match) else [r.event_id for r in db.query(Registration).filter_by(user_id=u.id).all()]
+                    event_ids = [int(persona_match.group(1))] if persona_match else [r.event_id for r in db.query(Registration).filter_by(user_id=u.id).all()]
                     for event_id in event_ids:
                         db.query(V2Recommendation).filter_by(event_id=event_id).delete()
                         if os.getenv('OPENAI_API_KEY'):
-                            for reg in db.query(Registration).filter_by(event_id=event_id).filter(Registration.personality.is_not(None)).all():
+                            for reg in db.query(Registration).filter_by(event_id=event_id).all():
                                 active = db.query(V2Job).filter_by(kind='matching',event_id=event_id,user_id=reg.user_id,target_id=0).filter(V2Job.state.in_(['pending','running'])).first()
                                 if not active: db.add(V2Job(kind='matching',event_id=event_id,user_id=reg.user_id,target_id=0,state='pending',error=''))
                     db.commit()
@@ -186,6 +195,8 @@ async def updates(ws: WebSocket, token: str):
 
 from v2 import install as install_v2
 V2Profile, V2Persona, V2Block, V2Introduction = install_v2(app, Base, db_session, current_user, User, Event, Registration, Connection)
+from enrichment_routes import install as install_enrichment
+install_enrichment(app, db_session, current_user, User, V2Profile, SECRET)
 
 @app.on_event('startup')
 def startup():
@@ -211,10 +222,14 @@ def login(body: AuthInput, db: Session = Depends(db_session)):
 def me(user: User = Depends(current_user)): return {**public_user(user), 'email': user.email, 'enrichment_consent': user.enrichment_consent}
 @app.put('/me')
 def update_me(body: ProfileInput, user: User = Depends(current_user), db: Session = Depends(db_session)):
+    row = db.get(V2Profile, user.id)
+    if row:
+        data = dict(row.data or {}); sources = dict(data.get('enrichment_sources') or {})
+        for key in ('bio', 'interests'):
+            if getattr(user, key) != getattr(body, key): sources.pop(key, None)
+        data['enrichment_sources'] = sources; row.data = data
     for k, v in body.model_dump().items(): setattr(user, k, v)
     db.commit(); return public_user(user)
-@app.get('/quiz-templates')
-def templates(user: User = Depends(current_user)): return [{'id': 'conversation-starters', 'name': 'Conversation starters', 'description': 'A placeholder quiz to get your community talking.', 'quiz': TEMPLATE}]
 @app.get('/events')
 def events(user: User = Depends(current_user), db: Session = Depends(db_session)):
     return [event_data(e, db, user) for e in db.query(Event).filter(or_(Event.published == True, Event.owner_id == user.id)).order_by(Event.starts_at).all()]
@@ -235,47 +250,66 @@ def update_event(event_id: int, body: EventInput, user: User = Depends(current_u
     db.commit(); return event_data(e, db, user)
 @app.delete('/events/{event_id}')
 def delete_event(event_id: int, user: User = Depends(current_user), db: Session = Depends(db_session)):
-    e = owner_event(db, event_id, user); db.query(V2Transcript).filter(V2Transcript.introduction_id.in_(db.query(V2Introduction.id).filter_by(event_id=e.id))).delete(synchronize_session=False); db.query(V2Job).filter_by(event_id=e.id).delete(); db.query(V2Recommendation).filter_by(event_id=e.id).delete(); db.query(V2Introduction).filter_by(event_id=e.id).delete(); db.query(V2Persona).filter_by(event_id=e.id).delete(); db.query(Registration).filter_by(event_id=e.id).delete(); db.delete(e); db.commit(); return {'ok': True}
+    e = owner_event(db, event_id, user); db.query(V2Transcript).filter(V2Transcript.introduction_id.in_(db.query(V2Introduction.id).filter_by(event_id=e.id))).delete(synchronize_session=False); db.query(V2Job).filter_by(event_id=e.id).delete(); db.query(V2Recommendation).filter_by(event_id=e.id).delete(); db.query(V2Introduction).filter_by(event_id=e.id).delete(); db.query(V2Persona).filter_by(event_id=e.id).delete(); db.query(RegistrationAnswers).filter(RegistrationAnswers.registration_id.in_(db.query(Registration.id).filter_by(event_id=e.id))).delete(synchronize_session=False); db.query(EventFields).filter_by(event_id=e.id).delete(); db.query(Registration).filter_by(event_id=e.id).delete(); db.delete(e); db.commit(); return {'ok': True}
+@app.get('/profile/personality-quiz')
+def profile_quiz(user: User = Depends(current_user)):
+    return {'personalities': PERSONALITIES, 'questions': [{'question': q['question'], 'options': [o['text'] for o in q['options']]} for q in TEMPLATE['questions']]}
+@app.post('/profile/personality-quiz')
+def profile_quiz_submit(body: AnswersInput, user: User = Depends(current_user), db: Session = Depends(db_session)):
+    questions = TEMPLATE['questions']
+    if len(body.answers) != len(questions) or any(i < 0 or i >= len(q['options']) for i,q in zip(body.answers, questions)):
+        raise HTTPException(422, 'Answer every question')
+    scores = {p: 0 for p in TEMPLATE['personalities']}
+    for i,q in zip(body.answers,questions): scores[q['options'][i]['personality']] += 1
+    result = max(scores, key=scores.get)
+    row = db.get(V2Profile,user.id)
+    if not row: row=V2Profile(user_id=user.id,data={},discoverable=True); db.add(row)
+    row.data = {**(row.data or {}), 'personality_result':result}; db.commit()
+    descriptions = {
+        'Adventurer': 'Fearless and spontaneous, you bring energy to new experiences and make every gathering an opportunity to explore.',
+        'Innovator': 'Curious and imaginative, you thrive on ideas, creative possibilities, and learning something new.',
+        'Mystic': 'Calm and insightful, you value reflection, inner harmony, and meaningful moments.',
+        'Synergist': 'Warm and engaging, you light up a room and help people feel connected.',
+    }
+    return {'personality':result, 'scores':scores, 'description':descriptions[result]}
+@app.get('/events/{event_id}/registration-fields')
+def registration_fields(event_id: int, user: User = Depends(current_user), db: Session = Depends(db_session)):
+    e = event_or_404(db,event_id)
+    if not e.published and e.owner_id != user.id: raise HTTPException(404, 'Event not found')
+    row=db.get(EventFields,event_id)
+    return {'fields': row.fields if row else []}
+@app.put('/events/{event_id}/registration-fields')
+def update_registration_fields(event_id: int, body: ExtraFieldsInput, user: User = Depends(current_user), db: Session = Depends(db_session)):
+    owner_event(db,event_id,user)
+    if db.query(Registration).filter_by(event_id=event_id).first(): raise HTTPException(409, 'Registration fields cannot change after someone registers')
+    labels = [f.label.strip() for f in body.fields]
+    if any(not label for label in labels) or len(set(label.casefold() for label in labels)) != len(labels): raise HTTPException(422, 'Field labels must be nonempty and unique')
+    row=db.get(EventFields,event_id)
+    if not row: row=EventFields(event_id=event_id,fields=[]); db.add(row)
+    row.fields=[{'label':label,'required':f.required} for label,f in zip(labels,body.fields)]; db.commit()
+    return {'fields':row.fields}
 @app.post('/events/{event_id}/register')
-def register(event_id: int, user: User = Depends(current_user), db: Session = Depends(db_session)):
+def register(event_id: int, body: RegistrationInput = RegistrationInput(), user: User = Depends(current_user), db: Session = Depends(db_session)):
+    from profile_rules import completion
     e = event_or_404(db, event_id)
     if not e.published or aware(e.starts_at) <= now(): raise HTTPException(400, 'Registration is closed')
-    if not registration(db, event_id, user.id): db.add(Registration(event_id=event_id, user_id=user.id)); db.commit()
-    return event_data(e, db, user)
-@app.get('/events/{event_id}/quiz')
-def get_quiz(event_id: int, user: User = Depends(current_user), db: Session = Depends(db_session)):
-    e = event_or_404(db, event_id)
-    if e.owner_id == user.id: return e.quiz
-    if not e.published or not registration(db, event_id, user.id): raise HTTPException(403, 'Register first')
-    return {'questions': [{'question': q['question'], 'options': [o['text'] for o in q['options']]} for q in e.quiz['questions']]}
-@app.put('/events/{event_id}/quiz')
-def update_quiz(event_id: int, body: QuizInput, user: User = Depends(current_user), db: Session = Depends(db_session)):
-    e = owner_event(db, event_id, user)
-    if db.query(Registration).filter(Registration.event_id == event_id, Registration.personality.is_not(None)).first(): raise HTTPException(409, 'Quiz cannot be changed after a participant completes it')
-    e.quiz = validate_quiz(body.quiz); db.commit(); return e.quiz
-@app.post('/events/{event_id}/quiz/submit')
-def submit_quiz(event_id: int, body: AnswersInput, user: User = Depends(current_user), db: Session = Depends(db_session)):
-    e = event_or_404(db, event_id); reg = registration(db, event_id, user.id)
-    if not e.published or not reg: raise HTTPException(403, 'Register first')
-    if aware(e.starts_at) <= now(): raise HTTPException(400, 'Quiz is closed')
-    if reg.personality: raise HTTPException(409, 'Quiz already completed')
-    questions = e.quiz['questions']
-    if len(body.answers) != len(questions) or any(i < 0 or i >= len(q['options']) for i, q in zip(body.answers, questions)): raise HTTPException(422, 'Answer every question with a valid option')
-    scores = {p: 0 for p in e.quiz['personalities']}
-    for i, q in zip(body.answers, questions): scores[q['options'][i]['personality']] += 1
-    reg.personality = max(scores, key=scores.get); db.commit(); return {'personality': reg.personality}
-@app.get('/events/{event_id}/recommendations')
-def recommendations(event_id: int, user: User = Depends(current_user), db: Session = Depends(db_session)):
-    e = event_or_404(db, event_id); own = registration(db, event_id, user.id)
-    if not e.published or not own or not own.personality: raise HTTPException(403, 'Complete the quiz first')
-    interests = {x.strip().lower() for x in user.interests.split(',') if x.strip()}
-    rows = []
-    for r in db.query(Registration).filter(Registration.event_id == event_id, Registration.user_id != user.id, Registration.personality.is_not(None)).all():
-        profile = db.get(V2Profile, r.user_id)
-        if (profile and not profile.discoverable) or db.query(V2Block).filter(or_((V2Block.user_id == user.id) & (V2Block.other_id == r.user_id), (V2Block.user_id == r.user_id) & (V2Block.other_id == user.id))).first(): continue
-        other = db.get(User, r.user_id); shared = sorted(interests & {x.strip().lower() for x in other.interests.split(',') if x.strip()})
-        rows.append({**public_user(other), 'personality': r.personality, 'shared_interests': shared, 'same_personality': r.personality == own.personality})
-    return sorted(rows, key=lambda x: (not x['same_personality'], -len(x['shared_interests']), x['name'].lower()))
+    existing=registration(db,event_id,user.id)
+    if existing: return event_data(e,db,user)
+    p=db.get(V2Profile,user.id); progress=completion(user,p.data if p else {})
+    if not progress['basic_complete']: raise HTTPException(403, 'Complete your basic profile before registering: ' + ', '.join(progress['missing_basic']))
+    fields=db.get(EventFields,event_id); fields=fields.fields if fields else []
+    labels={f['label'] for f in fields}
+    if set(body.answers)-labels: raise HTTPException(422, 'Unknown registration fields')
+    if any(f['required'] and not body.answers.get(f['label'],'').strip() for f in fields): raise HTTPException(422, 'Complete all required registration fields')
+    if any(len(v)>2000 for v in body.answers.values()): raise HTTPException(422, 'Registration answers must be at most 2000 characters')
+    reg=Registration(event_id=event_id,user_id=user.id); db.add(reg); db.flush()
+    db.add(RegistrationAnswers(registration_id=reg.id,answers=body.answers)); db.commit()
+    return event_data(e,db,user)
+@app.get('/events/{event_id}/registration-answers')
+def registration_answers(event_id: int, user: User = Depends(current_user), db: Session = Depends(db_session)):
+    owner_event(db,event_id,user)
+    rows=db.query(Registration).filter_by(event_id=event_id).all()
+    return [{'user_id':r.user_id,'name':db.get(User,r.user_id).name,'answers':(db.get(RegistrationAnswers,r.id).answers if db.get(RegistrationAnswers,r.id) else {})} for r in rows]
 @app.get('/connections')
 def connections(user: User = Depends(current_user), db: Session = Depends(db_session)):
     result = []
@@ -310,11 +344,6 @@ def send_message(other_id: int, body: TextInput, user: User = Depends(current_us
     if not text: raise HTTPException(422, 'Message cannot be empty')
     db.add(Message(sender_id=user.id, recipient_id=other_id, text=text)); db.commit(); return {'ok': True}
 
-# A provider must only be called after checking the participant's explicit consent.
-class ProfileEnrichmentProvider:
-    async def enrich(self, profile_url: str) -> dict[str, Any]:
-        raise NotImplementedError('Configure an enrichment provider in a future release')
-
 rooms: dict[int, dict[WebSocket, dict]] = {}
 async def broadcast(event_id, payload):
     for ws in list(rooms.get(event_id, {})):
@@ -332,7 +361,7 @@ def room_access(event_id, user_id):
     with SessionLocal() as db:
         event = db.get(Event, event_id)
         eligible = registration(db, event_id, user_id)
-        if not event or not event.published or not eligible or not eligible.personality:
+        if not event or not event.published or not eligible:
             return None
         return aware(event.starts_at)
 
@@ -342,10 +371,11 @@ async def room(ws: WebSocket, event_id: int, token: str):
         try: user = get_user(token, db)
         except HTTPException: await ws.close(code=4401); return
         e = db.get(Event, event_id); reg = registration(db, event_id, user.id)
-        if not e or not e.published or not reg or not reg.personality or aware(e.starts_at) <= now(): await ws.close(code=4403); return
+        if not e or not e.published or not reg or aware(e.starts_at) <= now(): await ws.close(code=4403); return
         deadline = aware(e.starts_at)
         slot = len(rooms.get(event_id, {}))
-        person = {**public_user(user), 'personality': reg.personality, 'x': 15 + (slot % 5) * 17, 'y': 25 + (slot // 5 % 4) * 16, 'direction': 'down', 'walking': False, 'room_id': 'plaza'}
+        p = db.get(V2Profile,user.id); personality = (p.data or {}).get('personality_result') if p else None
+        person = {**public_user(user), 'personality': personality, 'x': 15 + (slot % 5) * 17, 'y': 25 + (slot // 5 % 4) * 16, 'direction': 'down', 'walking': False, 'room_id': 'plaza'}
     await ws.accept(); rooms.setdefault(event_id, {})[ws] = person; await room_snapshot(event_id)
     try:
         next_access_check = asyncio.get_running_loop().time() + 5

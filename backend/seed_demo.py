@@ -1,5 +1,6 @@
 """Create a labelled fictional demo, without calling OpenAI. Run inside the API container."""
 from datetime import timedelta
+from networking import circle_for_score
 from main import (startup, SessionLocal, User, Event, Registration, V2Profile, V2Persona,
                   V2Recommendation, V2Introduction, V2Transcript, V2Job, passwords, now, TEMPLATE)
 
@@ -25,7 +26,8 @@ def main():
         for u, data in zip(users,attendees):
             db.add(Registration(event_id=event.id,user_id=u.id,personality='Explorer'))
             db.add(V2Persona(event_id=event.id,user_id=u.id,data={'attending':data[4],'seeking':data[5],'offering':data[6],'projects':'','topics':data[3]}))
-        for index,circle,score,reason in [(1,'shared',88,'Alex needs AI development; Devon offers AI engineering and seeks startup collaboration.'),(2,'inner',80,'Both work on agentic AI systems.'),(3,'perspectives',69,'Education and game design both relate to engagement.'),(4,'serendipity',65,'Education research could inform an AI learning product.')]:
+        for index,score,reason in [(1,88,'Alex needs AI development; Devon offers AI engineering and seeks startup collaboration.'),(2,80,'Both work on agentic AI systems.'),(3,58,'Education and game design both relate to engagement.'),(4,65,'Education research could inform an AI learning product.'),(5,20,'Their profiles provide limited evidence of a shared networking goal.')]:
+            circle=circle_for_score(score)
             db.add(V2Recommendation(event_id=event.id,user_id=users[0].id,candidate_id=users[index].id,data={'circle':circle,'score':score,'scores':[score]*5,'evidence':[reason],'explanation':reason,'conversation_starter':'What are you working on?','model':'fictional-precomputed-demo','usage':{}}))
         intro=V2Introduction(event_id=event.id,requester_id=users[0].id,recipient_id=users[1].id,state='approved',requester_sharing=['name','seeking','offering'],recipient_sharing=['name','seeking','offering']);db.add(intro);db.flush()
         messages=[{'speaker':'requester','phase':'introduction','text':'Alex is looking for a developer for an AI education product.'},{'speaker':'recipient','phase':'discovery','text':'Devon offers AI engineering and is looking for a startup collaboration.'},{'speaker':'requester','phase':'spark','text':'That sounds like a practical fit for Alex’s project.'},{'speaker':'recipient','phase':'conclusion','text':'They could discuss the product and whether they want to work together.'}]

@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 from typing import Literal
 
 class Match(BaseModel):
-    circle: Literal['inner', 'shared', 'perspectives', 'serendipity']
     scores: list[int] = Field(min_length=5, max_length=5)
     evidence: list[str] = Field(min_length=1, max_length=5)
     explanation: str = Field(min_length=1, max_length=600)
