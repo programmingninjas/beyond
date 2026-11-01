@@ -95,6 +95,7 @@ def test_matching_and_conversation_are_cached_and_authorized(client, monkeypatch
     for h in (a,b):
         complete_basic(client,h); client.post(f'/events/{event}/register',headers=h)
     bob=client.get('/me',headers=b).json()['id']
+    client.put('/v2/profile',headers=a,json={'pet_name':'Mochi','pet_color':'#9c6ade','pet_style':'calm','avatar':'axolotl'})
     client.put(f'/v2/events/{event}/persona',headers=a,json={'seeking':'A designer','offering':'Secret offer'})
     client.put('/v2/profile/pet-sharing',headers=a,json={'fields':['name','seeking']})
     client.put('/v2/profile/pet-sharing',headers=b,json={'fields':['name']})
@@ -114,8 +115,15 @@ def test_matching_and_conversation_are_cached_and_authorized(client, monkeypatch
     client.post(f'/v2/introductions/{intro}/generate',headers=a)
     convo=await_value(f'/v2/introductions/{intro}/conversation',a,'conversation')
     assert convo['conversation']['summary']=='They may collaborate.'
+    assert convo['pets']['viewer_side']=='requester'
+    assert convo['pets']['requester']=={'pet_name':'Mochi','pet_color':'#9c6ade','pet_style':'calm','avatar':'axolotl','owner_name':'alice'}
+    assert convo['pets']['recipient']=={'pet_name':'Spark','pet_color':'#c4b5fd','pet_style':'curious','avatar':'red-panda','owner_name':'bob'}
     assert calls[-1][1]['requester']=={'name':'alice','seeking':'A designer'}
     assert client.get(f'/v2/introductions/{intro}/conversation',headers=c).status_code==404
+    recipient_view=client.get(f'/v2/introductions/{intro}/conversation',headers=b).json()
+    assert recipient_view['pets']['viewer_side']=='recipient'
+    assert recipient_view['pets']['requester']['pet_name']=='Mochi'
+    assert recipient_view['pets']['recipient']['pet_name']=='Spark'
     assert not client.post(f'/v2/introductions/{intro}/decision',headers=a,json={'decision':'accept'}).json()['connected']
     assert client.post(f'/v2/introductions/{intro}/decision',headers=b,json={'decision':'accept'}).json()['connected']
     assert client.get(f'/messages/{bob}',headers=a).status_code==200

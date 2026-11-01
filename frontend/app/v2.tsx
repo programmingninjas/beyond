@@ -1,5 +1,5 @@
 'use client';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 
 const API = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : 'http://localhost:8000');
 const profileFields = [['phone','Phone number'],['projects','Projects'],['experience','Experience'],['achievements','Achievements'],['website','Personal website'],['additional_social','Additional social links'],['networking_goals','Networking goals'],['headline','Professional headline'],['role','Current role'],['organization','Organization or school'],['skills','Skills'],['expertise','Areas of expertise'],['industry','Industry']];
@@ -36,14 +36,114 @@ export function Discovery({token,eventId}:{token:string;eventId:number}) {
  return <div className="stack"><div className="panel stack"><h2>Your networking circles</h2><p>Discover why you might want to meet. Rankings are generated in the background and saved for this event.</p><button className="button primary" disabled={['pending','running'].includes(data.job?.state)} onClick={async()=>{try{await call(`/v2/events/${eventId}/matching/refresh`,{method:'POST'});await load()}catch(e:any){setError(e.message)}}}>Refresh recommendations</button>{data.job&&<p>Matching: {data.job.state}{data.job.error&&` — ${data.job.error}`}</p>}{!data.job&&<p>Choose refresh to generate your recommendations.</p>}{error&&<p className="alert">{error}</p>}</div>{sections.map(([key,title,description],i)=>{const matches=data.matches.filter((m:any)=>m.circle===key);return <section key={key}><h2>{String(i+1).padStart(2,'0')} — {title} <small>({matches.length})</small></h2><p>{description}</p><div className="people-grid">{matches.map((m:any)=><div className="panel stack" key={m.id}><div className="person-avatar">✦</div><h3>{m.name}</h3><strong>{m.score}% relevance</strong>{m.model==='fictional-precomputed-demo'&&<small>Fictional precomputed demo</small>}<p>{m.explanation}</p><p>{m.conversation_starter}</p><details><summary>Supporting evidence</summary><ul>{m.evidence.map((e:string)=><li key={e}>{e}</li>)}</ul></details><PetRequest token={token} eventId={eventId} personId={m.id}/></div>)}</div>{!matches.length&&<p className="muted">No recommendations in this circle yet.</p>}</section>})}<section><h2>Attendee directory</h2><div className="people-grid">{directory.map(p=><div className="panel stack" key={p.id}><h3>{p.name}</h3><p>{p.bio}</p><PetRequest token={token} eventId={eventId} personId={p.id}/></div>)}</div>{!directory.length&&<p>No other eligible attendees yet.</p>}</section></div>
 }
 
+const avatarSpecies:Record<string,string>={'red-panda':'Red panda',axolotl:'Axolotl','sunda-pangolin':'Sunda pangolin',kakapo:'Kākāpō',vaquita:'Vaquita'};
+const petDefaults={pet_name:'Spark',pet_color:'#c4b5fd',pet_style:'curious',avatar:'red-panda',owner_name:'Your match'};
+function petTint(hex:string){const safe=/^#[\da-f]{6}$/i.test(hex)?hex:'#c4b5fd';const n=parseInt(safe.slice(1),16);const mix=(shift:number)=>Math.round(((n>>shift)&255)*.14+255*.86).toString(16).padStart(2,'0');return `#${mix(16)}${mix(8)}${mix(0)}`}
+function petForeground(hex:string){const n=parseInt(hex.replace('#',''),16);const r=n>>16,g=(n>>8)&255,b=n&255;return (r*299+g*587+b*114)/1000>155?'#24352b':'#ffffff'}
+function titleCase(value:string){return value.replace(/[-_]+/g,' ').replace(/\b\w/g,char=>char.toUpperCase())}
+
 export function Conversation({token,introId}:{token:string;introId:number}) {
- const [data,setData]=useState<any>({});const [error,setError]=useState('');const [index,setIndex]=useState(0);const [playing,setPlaying]=useState(false);const [connected,setConnected]=useState(false);
- async function call(suffix:string,options:RequestInit={}){const r=await fetch(`${API}/v2/introductions/${introId}/${suffix}`,{...options,headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`}});const d=await r.json();if(!r.ok)throw new Error(d.detail||'Request failed');return d}
- async function load(){try{setData(await call('conversation'))}catch(e:any){setError(e.message)}}
- useEffect(()=>{load();const t=setInterval(load,4000);return()=>clearInterval(t)},[introId,token]);
- useEffect(()=>{if(!playing||!data.conversation)return;const t=setInterval(()=>setIndex((i:number)=>{if(i>=data.conversation.messages.length-1){setPlaying(false);return i}return i+1}),1800);return()=>clearInterval(t)},[playing,data.conversation?.messages?.length]);
+ const [data,setData]=useState<any>({});
+ const [error,setError]=useState('');
+ const [loading,setLoading]=useState(true);
+ const [visibleCount,setVisibleCount]=useState(0);
+ const [playing,setPlaying]=useState(false);
+ const [busy,setBusy]=useState(false);
+ const [connected,setConnected]=useState(false);
+ const threadRef=useRef<HTMLDivElement>(null);
+ async function call(suffix:string,options:RequestInit={}){
+  let response:Response;
+  try{response=await fetch(`${API}/v2/introductions/${introId}/${suffix}`,{...options,headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`}})}
+  catch{throw new Error('unreachable')}
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error('request-failed');
+  return result;
+ }
+ async function load(){
+  try{const result=await call('conversation');setData(result);setError('')}
+  catch{setError("Couldn't reach the server. Retrying…")}
+  finally{setLoading(false)}
+ }
+ useEffect(()=>{setLoading(true);void load();const timer=setInterval(()=>void load(),4000);return()=>clearInterval(timer)},[introId,token]);
  const convo=data.conversation;
- return <div className="panel stack"><h3>Pet conversation</h3>{error&&<p className="alert">{error}</p>}{!convo?<><p>{data.job?.state==='failed'?`Generation failed: ${data.job.error}`:data.job?`Generation ${data.job.state}`:'Both owners approved. Start the conversation when ready.'}</p><button className="button primary" disabled={['pending','running'].includes(data.job?.state)} onClick={async()=>{try{await call('generate',{method:'POST'});await load()}catch(e:any){setError(e.message)}}}>Generate conversation</button></>:<>{convo.model==='fictional-precomputed-demo'&&<p>Fictional precomputed demo conversation.</p>}<div className="pet-stage"><span>👻</span><div><small>{convo.messages[index].phase}</small><p>{convo.messages[index].text}</p><small>{convo.messages[index].speaker === 'requester'?'First pet':'Second pet'}</small></div><span>👻</span></div><div className="form-row"><button className="button outline" onClick={()=>setPlaying(!playing)}>{playing?'Pause':'Play'}</button><button className="button outline" onClick={()=>{setPlaying(false);setIndex(0)}}>Replay</button><button className="button outline" onClick={()=>{setPlaying(false);setIndex(convo.messages.length-1)}}>Skip</button></div><h4>Discoveries</h4>{convo.highlights.map((h:string,i:number)=><p key={i}>✦ {h}</p>)}<details><summary>Read transcript</summary>{convo.messages.map((m:any,i:number)=><button className="transcript-line" key={i} onClick={()=>setIndex(i)}><b>{m.speaker === 'requester'?'First pet':'Second pet'}</b>: {m.text}</button>)}</details><h4>Why might you meet?</h4><p>{convo.summary}</p><p>Your decision: {data.your_decision}{connected&&' · Connected!'}</p>{['accept','decline','withdraw'].map(action=><button className="button outline" key={action} onClick={async()=>{try{const d=await call('decision',{method:'POST',body:JSON.stringify({decision:action})});setConnected(d.connected);await load()}catch(e:any){setError(e.message)}}}>{action==='accept'?'Accept introduction':action==='decline'?'Decline':'Withdraw pending acceptance'}</button>)}</>}</div>
+ const messages:any[]=convo?.messages||[];
+ const total=messages.length;
+ const visibleMessages=messages.slice(0,visibleCount);
+ const viewerSide=data.pets?.viewer_side==='recipient'?'recipient':'requester';
+ const otherSide=viewerSide==='requester'?'recipient':'requester';
+ const myPet={...petDefaults,...(data.pets?.[viewerSide]||{})};
+ const theirPet={...petDefaults,...(data.pets?.[otherSide]||{})};
+ const currentSpeaker=playing&&visibleCount<total?messages[visibleCount]?.speaker:visibleMessages[visibleMessages.length-1]?.speaker;
+ const activeSide=currentSpeaker===viewerSide?'mine':currentSpeaker?'theirs':'';
+ useEffect(()=>{if(convo&&total>0&&visibleCount===0&&!playing)setVisibleCount(1)},[convo?.model,total]);
+ useEffect(()=>{
+  if(!playing||visibleCount>=total){if(visibleCount>=total)setPlaying(false);return}
+  const timer=setTimeout(()=>setVisibleCount(count=>Math.min(count+1,total)),visibleCount===0?550:1450);
+  return()=>clearTimeout(timer);
+ },[playing,visibleCount,total]);
+ useEffect(()=>{
+  if(!visibleCount)return;
+  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  threadRef.current?.lastElementChild?.scrollIntoView({behavior:reduced?'auto':'smooth',block:'nearest'});
+ },[visibleCount]);
+ async function generate(){
+  setBusy(true);
+  try{await call('generate',{method:'POST'});setError('');await load()}
+  catch{setError("Couldn't reach the server. Retrying…")}
+  finally{setBusy(false)}
+ }
+ async function decide(action:string){
+  setBusy(true);
+  try{const result=await call('decision',{method:'POST',body:JSON.stringify({decision:action})});setConnected(result.connected);setError('');await load()}
+  catch{setError("Couldn't reach the server. Retrying…")}
+  finally{setBusy(false)}
+ }
+ const petCard=(pet:any,side:'mine'|'theirs',label:string)=>{
+  const name=pet.pet_name||'Spark';const fill=/^#[\da-f]{6}$/i.test(pet.pet_color)?pet.pet_color:'#c4b5fd';
+  return <section className={`conversation-pet-card ${activeSide===side?'speaking':''} ${activeSide&&activeSide!==side?'dimmed':''}`} aria-label={`${label}: ${name}, ${avatarSpecies[pet.avatar]||'Animal companion'}, ${titleCase(pet.pet_style||'curious')} style`}>
+   <div className="conversation-pet-badge" style={{backgroundColor:fill,color:petForeground(fill)}} aria-hidden="true">{name.trim().charAt(0).toLocaleUpperCase()||'✦'}</div>
+   <div className="conversation-pet-copy"><b>{name}</b><span>{avatarSpecies[pet.avatar]||'Animal companion'}</span><small>{titleCase(pet.pet_style||'curious')} · {label}</small></div>
+  </section>
+ };
+ const retryPanel=<div className="conversation-error" role="alert"><div><b>{error||"Couldn't reach the server. Retrying…"}</b><span>Check your connection, then try again.</span></div><button className="button outline" onClick={()=>{setLoading(true);void load()}}>Retry</button></div>;
+ if(loading&&!data.pets)return <section className="pet-conversation panel" aria-busy="true"><h3>Loading your pets’ conversation…</h3><div className="conversation-skeleton"/></section>;
+ if(error&&!data.pets)return <section className="pet-conversation panel" aria-label="Pet conversation">{retryPanel}</section>;
+ return <section className="pet-conversation panel stack" aria-label="Pet conversation">
+  {error&&retryPanel}
+  <header className="conversation-header">
+   <div><p className="mini-label">A PRIVATE INTRODUCTION</p><h3>{myPet.pet_name||'Spark'} &amp; {theirPet.pet_name||'Spark'}</h3><p>A conversation between your pets, based only on what you each chose to share.</p></div>
+  </header>
+  <div className="pet-stage conversation-pet-pair" aria-label="Pets in this conversation">
+   {petCard(myPet,'mine','Your pet')}
+   <span className="conversation-pair-mark" aria-hidden="true">&amp;</span>
+   {petCard(theirPet,'theirs',`${theirPet.owner_name||'Your match'}’s pet`)}
+  </div>
+  {!convo&&data.job?.state==='failed'&&<div className="conversation-state conversation-state-failed"><span className="conversation-state-icon" aria-hidden="true">↻</span><div><h4>Your pets couldn’t finish their conversation.</h4><p>Try generating it again. Nothing was lost.</p></div><button className="button primary" disabled={busy} onClick={generate}>Retry conversation</button></div>}
+  {!convo&&['pending','running'].includes(data.job?.state)&&<div className="conversation-state" aria-live="polite"><div><h4>Your pets are talking…</h4><p>This can take a little while.</p></div><div className="pending-bubbles" aria-hidden="true"><span/><span/><span/></div></div>}
+  {!convo&&!['pending','running','failed'].includes(data.job?.state)&&<div className="conversation-state conversation-state-ready"><div><h4>Ready when you are</h4><p>Both owners approved. Start the conversation to see what your pets share.</p></div><button className="button primary" disabled={busy} onClick={generate}>Generate conversation</button></div>}
+  {convo&&<>
+   <div className="conversation-toolbar" aria-label="Conversation playback controls">
+    <div className="conversation-toolbar-buttons"><button className="button primary" onClick={()=>{if(!playing&&visibleCount>=total)setVisibleCount(0);setPlaying(value=>!value)}} disabled={!total}>{playing?'Pause':'Play'}<span aria-hidden="true">{playing?'Ⅱ':'▶'}</span></button><button className="button outline" onClick={()=>{setVisibleCount(0);setPlaying(true)}} disabled={!total}>Restart</button><button className="button outline" onClick={()=>{setPlaying(false);setVisibleCount(total)}} disabled={!total}>Show all</button></div>
+    <div className="conversation-progress"><span>{Math.min(visibleCount,total)} of {total}</span><progress max={Math.max(total,1)} value={Math.min(visibleCount,total)} aria-label={`${Math.min(visibleCount,total)} of ${total} messages shown`}/></div>
+   </div>
+   <div className="conversation-thread" ref={threadRef} role="log" aria-label="Conversation thread" aria-live="polite" aria-relevant="additions text" aria-atomic="false">
+    {visibleMessages.map((message:any,index:number)=>{
+     const side=message.speaker===viewerSide?'mine':'theirs';const pet=side==='mine'?myPet:theirPet;const previous=visibleMessages[index-1];
+     return <div key={`${index}-${message.phase}`}>
+      {(!previous||previous.phase!==message.phase)&&<div className="conversation-phase"><span/>{titleCase(message.phase||'Conversation')}<span/></div>}
+      <div className={`conversation-message-row ${side}`}>
+       <article className="conversation-message" style={{'--message-tint':petTint(pet.pet_color)} as React.CSSProperties}><b>{pet.pet_name||'Spark'}</b><p>{message.text}</p></article>
+      </div>
+     </div>
+    })}
+    {playing&&visibleCount<total&&(()=>{const side=messages[visibleCount]?.speaker===viewerSide?'mine':'theirs';const pet=side==='mine'?myPet:theirPet;return <div className={`conversation-message-row ${side}`}><div className="conversation-typing" aria-label={`${pet.pet_name||'Pet'} is typing`}><i/><i/><i/></div></div>})()}
+    {!total&&<p className="conversation-empty">The conversation is ready, but there are no messages to show.</p>}
+   </div>
+   <section className="conversation-discoveries"><div><p className="mini-label">SHARED THREADS</p><h4>Discoveries</h4></div><div className="discovery-cards">{(convo.highlights||[]).map((highlight:string,index:number)=><article className="discovery-card" key={`${highlight}-${index}`}><span aria-hidden="true">✦</span><p>{highlight}</p></article>)}</div></section>
+   <section className="conversation-summary"><h4>Why might you meet?</h4><p>{convo.summary}</p></section>
+   <section className="conversation-decision"><div><p className="mini-label">YOUR INTRODUCTION</p><h4>{connected?'You’re connected':`Your decision: ${titleCase(data.your_decision||'pending')}`}</h4><p>{connected?'You can continue the conversation in your connections.':'Accept to connect, decline to close this introduction, or withdraw your pending acceptance.'}</p></div><div className="conversation-decision-actions"><button className="button primary" disabled={busy||connected} onClick={()=>decide('accept')}>Accept introduction</button><button className="button outline" disabled={busy||connected} onClick={()=>decide('decline')}>Decline</button><button className="conversation-withdraw" disabled={busy||data.your_decision!=='accept'} onClick={()=>decide('withdraw')}>Withdraw acceptance</button></div></section>
+  </>}
+ </section>
 }
 
 export function PersonalityQuiz({token}:{token:string}) {

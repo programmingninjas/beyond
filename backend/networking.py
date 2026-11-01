@@ -112,7 +112,21 @@ def install(app, Base, SessionLocal, current_user, User, Event, Registration, Co
         if intro.state != 'approved': raise HTTPException(409,'Conversation unavailable')
         row=db.get(Transcript,intro.id)
         job=db.query(Job).filter_by(kind='conversation',target_id=intro.id).order_by(Job.id.desc()).first()
-        return {'conversation':row.data if row else None,'job':job_data(job) if job else None,'your_decision':(row.requester_decision if intro.requester_id==user.id else row.recipient_decision) if row else 'pending'}
+        pet_defaults={'pet_name':'Spark','pet_color':'#c4b5fd','pet_style':'curious','avatar':'red-panda'}
+        def pet_details(owner_id):
+            owner=db.get(User,owner_id); profile=db.get(Profile,owner_id)
+            values={**pet_defaults,**(profile.data if profile else {})}
+            return {**{key:values[key] for key in pet_defaults},'owner_name':owner.name}
+        return {
+            'conversation':row.data if row else None,
+            'job':job_data(job) if job else None,
+            'your_decision':(row.requester_decision if intro.requester_id==user.id else row.recipient_decision) if row else 'pending',
+            'pets':{
+                'viewer_side':'requester' if intro.requester_id==user.id else 'recipient',
+                'requester':pet_details(intro.requester_id),
+                'recipient':pet_details(intro.recipient_id),
+            },
+        }
     class Decision(BaseModel):
         decision: Literal['accept','decline','withdraw']
     @app.post('/v2/introductions/{intro_id}/decision')
