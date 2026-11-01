@@ -168,8 +168,11 @@ async def publish_changes(request, call_next):
                         db.query(V2Recommendation).filter_by(event_id=event_id).delete()
                         if os.getenv('OPENAI_API_KEY'):
                             for reg in db.query(Registration).filter_by(event_id=event_id).all():
-                                active = db.query(V2Job).filter_by(kind='matching',event_id=event_id,user_id=reg.user_id,target_id=0).filter(V2Job.state.in_(['pending','running'])).first()
-                                if not active: db.add(V2Job(kind='matching',event_id=event_id,user_id=reg.user_id,target_id=0,state='pending',error=''))
+                                # Keep a follow-up queued when a profile changes
+                                # during an in-flight match. That run may reject
+                                # its stale snapshot, so it cannot cover this edit.
+                                pending = db.query(V2Job).filter_by(kind='matching',event_id=event_id,user_id=reg.user_id,target_id=0,state='pending').first()
+                                if not pending: db.add(V2Job(kind='matching',event_id=event_id,user_id=reg.user_id,target_id=0,state='pending',error=''))
                     db.commit()
                 except HTTPException: pass
     if response.status_code < 400 and request.method in ('POST', 'PUT', 'PATCH', 'DELETE') and (path == '/me' or path.startswith(('/events', '/connections', '/messages', '/v2/'))):

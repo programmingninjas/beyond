@@ -10,7 +10,9 @@ Install Docker and Docker Compose, then create `.env` from `.env.example` if it 
 docker compose up --build
 ```
 
-Open http://localhost:3000. The API and interactive API documentation are at http://localhost:8000/docs. PostgreSQL data persists in the `postgres_data` Docker volume. Set `SECRET_KEY` in your environment before starting Compose to override the development signing key. `NEXT_PUBLIC_API_URL` is compiled into the web image and defaults to `http://localhost:8000`; `FRONTEND_ORIGIN` controls API CORS. Event times entered in the browser are converted from the browser's local time to UTC for storage.
+Open http://localhost:3000. The API and interactive API documentation are at http://localhost:8000/docs. PostgreSQL data persists in the `postgres_data` Docker volume. Set `SECRET_KEY` in your environment before starting Compose to override the development signing key. The browser client uses the hostname you opened for API requests, and `FRONTEND_ORIGIN` configures the API CORS origin. Event times entered in the browser are converted from the browser's local time to UTC for storage.
+
+To open the app from another device on the same Wi-Fi, use the host computer's LAN address, for example `http://192.168.1.20:3000`. The browser client uses the page hostname for API requests, and the API permits local-network origins on port 3000. Find the Mac's current Wi-Fi address with `ipconfig getifaddr en0`; the address can change when it reconnects to Wi-Fi.
 
 Create an account and complete the basic profile before registering for a new event: name, email, phone, a social profile URL, a 100–1,000 character About Me, and at least one interest. Existing registrations remain valid. Organizers can add short-answer registration questions and view responses; questions lock after the first registration. The personality quiz is optional for registration and completed once at account level. Its questions and scoring remain placeholders.
 

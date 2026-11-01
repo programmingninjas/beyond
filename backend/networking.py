@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Literal
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, UniqueConstraint, or_
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, UniqueConstraint, case, or_
 from sqlalchemy.orm import Mapped, Session, mapped_column
 from ai_service import generate, Match, PetConversation
 
@@ -167,7 +167,10 @@ def install(app, Base, SessionLocal, current_user, User, Event, Registration, Co
     async def worker():
         while True:
             with SessionLocal() as db:
-                job=db.query(Job).filter_by(state='pending').order_by(Job.id).first(); job_id=job.id if job else None
+                # Pet conversations are user-facing and consent-gated; keep them
+                # responsive when a bulk matching refresh has queued many jobs.
+                priority = case((Job.kind == 'conversation', 0), else_=1)
+                job=db.query(Job).filter_by(state='pending').order_by(priority, Job.id).first(); job_id=job.id if job else None
             if job_id: await asyncio.to_thread(run_job,job_id)
             else: await asyncio.sleep(2)
     @app.on_event('startup')
