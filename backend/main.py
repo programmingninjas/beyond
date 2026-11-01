@@ -1,4 +1,5 @@
 import asyncio
+from collections import deque
 import math
 import os
 import re
@@ -13,6 +14,7 @@ from pwdlib import PasswordHash
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, create_engine, or_
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from world import CHAT_RADIUS, REVISION, ROOMS, RADIUS, WALK_SPEED, blocked, in_bounds, public_worlds, safe_spawn, shape_contains, swept_move
 
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./beyond.db')
 SECRET = os.getenv('SECRET_KEY', 'local-development-change-me')
@@ -206,6 +208,12 @@ from networking import install as install_networking
 V2Job, V2Recommendation, V2Transcript = install_networking(app, Base, SessionLocal, current_user, User, Event, Registration, Connection, V2Profile, V2Persona, V2Block, V2Introduction)
 @app.get('/health')
 def health(): return {'status': 'ok'}
+@app.get('/worlds')
+def get_worlds(): return public_worlds()
+@app.get('/worlds/{room_id}')
+def get_world(room_id: str):
+    if room_id not in ROOMS: raise HTTPException(404, 'World not found')
+    return {'revision': REVISION, 'coordinateSystem': public_worlds()['coordinateSystem'], 'room': ROOMS[room_id]}
 @app.post('/auth/signup')
 def signup(body: AuthInput, db: Session = Depends(db_session)):
     if not body.name.strip(): raise HTTPException(422, 'Name is required')
@@ -345,6 +353,24 @@ def send_message(other_id: int, body: TextInput, user: User = Depends(current_us
     db.add(Message(sender_id=user.id, recipient_id=other_id, text=text)); db.commit(); return {'ok': True}
 
 rooms: dict[int, dict[WebSocket, dict]] = {}
+def allow_move_request(move_times: deque, current_time: float) -> bool:
+    while move_times and current_time - move_times[0] >= 1:
+        move_times.popleft()
+    if len(move_times) >= 20:
+        return False
+    move_times.append(current_time)
+    return True
+
+def choose_spawn(event_id: int, room_id: str, spawn_id: str):
+    room_config = ROOMS[room_id]
+    spawn = safe_spawn(room_config, spawn_id)
+    occupied = [p for p in rooms.get(event_id, {}).values() if p['room_id'] == room_id]
+    for ox, oy in ((0,0),(-72,0),(72,0),(0,-72),(0,72),(-72,-72),(72,-72)):
+        x, y = spawn['x'] + ox, spawn['y'] + oy
+        if not blocked(room_config, x, y) and not any(math.hypot(p['x']-x,p['y']-y) < RADIUS*2+8 for p in occupied):
+            return {**spawn, 'x': x, 'y': y}
+    return spawn
+
 async def broadcast(event_id, payload):
     for ws in list(rooms.get(event_id, {})):
         try: await ws.send_json(payload)
@@ -355,7 +381,7 @@ async def room_snapshot(event_id):
         hidden = {(b.user_id,b.other_id) for b in db.query(V2Block).all()}
     for peer, person in list(members.items()):
         visible = [p for p in members.values() if p['room_id'] == person['room_id'] and (p['id'],person['id']) not in hidden and (person['id'],p['id']) not in hidden]
-        try: await peer.send_json({'type': 'presence', 'participants': visible})
+        try: await peer.send_json({'type': 'presence', 'world_revision': REVISION, 'participants': visible})
         except Exception: members.pop(peer, None)
 def room_access(event_id, user_id):
     with SessionLocal() as db:
@@ -373,10 +399,14 @@ async def room(ws: WebSocket, event_id: int, token: str):
         e = db.get(Event, event_id); reg = registration(db, event_id, user.id)
         if not e or not e.published or not reg or aware(e.starts_at) <= now(): await ws.close(code=4403); return
         deadline = aware(e.starts_at)
-        slot = len(rooms.get(event_id, {}))
-        p = db.get(V2Profile,user.id); personality = (p.data or {}).get('personality_result') if p else None
-        person = {**public_user(user), 'personality': personality, 'x': 15 + (slot % 5) * 17, 'y': 25 + (slot // 5 % 4) * 16, 'direction': 'down', 'walking': False, 'room_id': 'plaza'}
+        spawn = choose_spawn(event_id, 'plaza', 'south_event_entrance')
+        profile = db.get(V2Profile, user.id)
+        personality = (profile.data or {}).get('personality_result') if profile else None
+        person = {**public_user(user), 'personality': personality or reg.personality, 'x': spawn['x'], 'y': spawn['y'], 'direction': spawn['facing'], 'walking': False, 'room_id': 'plaza', 'seat_group': None, 'seat_id': None, 'seat_anchor': None}
     await ws.accept(); rooms.setdefault(event_id, {})[ws] = person; await room_snapshot(event_id)
+    last_move = asyncio.get_running_loop().time()
+    last_seq = -1
+    move_times = deque()
     try:
         next_access_check = asyncio.get_running_loop().time() + 5
         while True:
@@ -391,25 +421,82 @@ async def room(ws: WebSocket, event_id: int, token: str):
             try: data = await asyncio.wait_for(ws.receive_json(), timeout=min(remaining, max(0.01, next_access_check - clock)))
             except asyncio.TimeoutError: continue
             if data.get('type') == 'room':
-                if data.get('room_id') in ('plaza','cafe','garden','arcade','lab'):
-                    person['room_id'] = data['room_id']; person['x'] = 50; person['y'] = 50
-                    await ws.send_json({'type':'room_changed','room_id':person['room_id'],'x':50,'y':50})
+                # Direct room selection exists only for local development diagnostics.
+                if os.getenv('WORLD_ALLOW_ROOM_SWITCH') == '1' and data.get('room_id') in ROOMS:
+                    person['room_id'] = data['room_id']; spawn = safe_spawn(ROOMS[person['room_id']], 'default')
+                    person['x'], person['y'], person['direction'] = spawn['x'], spawn['y'], spawn['facing']
+                    person.update(seat_group=None, seat_id=None, seat_anchor=None)
+                    await ws.send_json({'type':'room_changed','room_id':person['room_id'],'spawn_id':'default','x':person['x'],'y':person['y'],'direction':person['direction']})
                     await room_snapshot(event_id)
+                else:
+                    await ws.send_json({'type':'world_error','code':'room_switch_disabled','message':'Use the room portals to travel.'})
             elif data.get('type') == 'move':
                 try:
                     x, y = float(data['x']), float(data['y'])
-                    if not math.isfinite(x) or not math.isfinite(y): continue
-                    person['x'], person['y'] = max(5, min(95, x)), max(10, min(90, y))
+                    seq = data.get('seq')
+                    if not isinstance(seq, int) or isinstance(seq, bool) or seq <= last_seq:
+                        await ws.send_json({'type':'position','seq':seq,'x':person['x'],'y':person['y'],'accepted':False}); continue
+                    last_seq = seq
+                    current_time = asyncio.get_running_loop().time()
+                    if not allow_move_request(move_times, current_time):
+                        await ws.send_json({'type':'position','seq':seq,'x':person['x'],'y':person['y'],'accepted':False}); continue
+                    if not math.isfinite(x) or not math.isfinite(y):
+                        await ws.send_json({'type':'position','seq':data.get('seq'),'x':person['x'],'y':person['y'],'accepted':False}); continue
+                    elapsed = max(0.0, min(1.0, current_time - last_move))
+                    distance = math.hypot(x-person['x'], y-person['y'])
+                    reachable = WALK_SPEED * elapsed + 2.5
+                    accepted = distance <= reachable and in_bounds(ROOMS[person['room_id']], x, y)
+                    if accepted:
+                        person['x'], person['y'] = swept_move(ROOMS[person['room_id']], (person['x'], person['y']), (x, y))
+                        accepted = math.hypot(x-person['x'], y-person['y']) < 0.01
+                    last_move = current_time
                     person['direction'] = data.get('direction') if data.get('direction') in ('up', 'down', 'left', 'right') else 'down'
-                    person['walking'] = data.get('walking') is True
+                    person['walking'] = data.get('walking') is True and accepted
+                    if accepted and distance > 0.5: person.update(seat_group=None, seat_id=None, seat_anchor=None)
                 except (ValueError, TypeError, KeyError): continue
+                await ws.send_json({'type':'position','seq':data.get('seq'),'x':person['x'],'y':person['y'],'accepted':accepted})
+                await room_snapshot(event_id)
+            elif data.get('type') == 'portal_enter':
+                room_config = ROOMS[person['room_id']]
+                portal = next((p for p in room_config['portals'] if p['id'] == data.get('portal_id')), None)
+                if not portal or not shape_contains(portal['trigger'], person['x'], person['y'], 42):
+                    await ws.send_json({'type':'world_error','code':'portal_out_of_range','message':'Move closer to enter.'}); continue
+                destination = portal['destination']; next_room = ROOMS[destination['roomId']]
+                spawn = choose_spawn(event_id, destination['roomId'], destination['spawnId'])
+                x, y = spawn['x'], spawn['y']
+                person.update(room_id=destination['roomId'],x=x,y=y,direction=spawn['facing'],walking=False,seat_group=None,seat_id=None,seat_anchor=None)
+                last_move = asyncio.get_running_loop().time()
+                await ws.send_json({'type':'room_changed','room_id':person['room_id'],'spawn_id':spawn['id'],'x':x,'y':y,'direction':spawn['facing']})
+                await room_snapshot(event_id)
+            elif data.get('type') == 'interact':
+                room_config = ROOMS[person['room_id']]
+                action = next((a for a in room_config['interactions'] if a['id'] == data.get('interaction_id')), None)
+                eligible = [a for a in room_config['interactions'] if math.hypot(a['anchor']['x']-person['x'], a['anchor']['y']-person['y']) <= a['radius']]
+                eligible.sort(key=lambda a: (-a['priority'], math.hypot(a['anchor']['x']-person['x'], a['anchor']['y']-person['y'])))
+                if not action or not eligible or action['id'] != eligible[0]['id']:
+                    await ws.send_json({'type':'world_error','code':'interaction_out_of_range','message':'Move closer to use this.'}); continue
+                anchor = action.get('anchor')
+                seat_id = None
+                if action['action']['type'] == 'seat':
+                    group = action['action'].get('seatGroup')
+                    candidates = [s for s in room_config.get('seats',[]) if s['id'].startswith(group+'_')]
+                    occupied = {p.get('seat_id') for p in rooms.get(event_id,{}).values() if p is not person and p['room_id'] == person['room_id'] and p.get('seat_id')}
+                    free = [s for s in candidates if s['id'] not in occupied]
+                    if not free:
+                        await ws.send_json({'type':'world_error','code':'seats_full','message':'All nearby seats are occupied.'}); continue
+                    seat = min(free,key=lambda s: math.hypot(s['x']-person['x'],s['y']-person['y']))
+                    seat_id, anchor = seat['id'], {'x':seat['x'],'y':seat['y'],'facing':seat['facing']}
+                    person['seat_group'], person['seat_id'], person['seat_anchor'] = group, seat_id, anchor
+                    person.update(x=seat['x'], y=seat['y'], direction=seat['facing'], walking=False)
+                    await ws.send_json({'type':'position','x':person['x'],'y':person['y'],'direction':person['direction'],'accepted':True})
+                await ws.send_json({'type':'interaction_result','interaction_id':action['id'],'action':action['action'],'label':action['label'],'payload':{'panel':action['action'].get('panel'),'anchor':anchor,'seat_group':person.get('seat_group'),'seat_id':seat_id}})
                 await room_snapshot(event_id)
             elif data.get('type') == 'chat':
                 text = str(data.get('text', '')).strip()[:500]
                 target_id = data.get('target_id')
                 targets = [(peer, other) for peer, other in rooms.get(event_id, {}).items()
                            if other['id'] == target_id and other['id'] != person['id'] and other['room_id'] == person['room_id']
-                           and math.hypot(other['x'] - person['x'], other['y'] - person['y']) <= 18]
+                           and math.hypot(other['x'] - person['x'], other['y'] - person['y']) <= CHAT_RADIUS]
                 if text and targets:
                     with SessionLocal() as db:
                         if db.query(V2Block).filter(or_((V2Block.user_id == person['id']) & (V2Block.other_id == target_id), (V2Block.user_id == target_id) & (V2Block.other_id == person['id']))).first():

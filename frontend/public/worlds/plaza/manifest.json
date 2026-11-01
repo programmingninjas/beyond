@@ -1,0 +1,47 @@
+{
+  "roomId": "plaza",
+  "label": "Discovery Plaza",
+  "coordinateSpace": [
+    1920,
+    1080
+  ],
+  "layers": [
+    {
+      "id": "background",
+      "file": "background.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "62e8ea41967f63f5640a04456327092e998e4cd4be48e4245258f25ea36fbd40",
+      "placeholder": true,
+      "z": 0
+    },
+    {
+      "id": "ground",
+      "file": "ground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "87f2b461e8edb7c3e69b8b7333030736fee8f11c541dd7cf8a169682ffb01567",
+      "placeholder": true,
+      "z": 10
+    },
+    {
+      "id": "midground",
+      "file": "midground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "5150cf91a02e00f98c74277187e750f94dc863b696b8c83c841bd7fd85f0afb5",
+      "placeholder": true,
+      "z": 20
+    },
+    {
+      "id": "foreground",
+      "file": "foreground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "882716629a3190fc82560f0e00908be6d992f3f3bb9461118257980521edf3a2",
+      "placeholder": true,
+      "z": 40
+    }
+  ],
+  "source": "Engineering placeholder; replace file content without changing room or layer IDs."
+}

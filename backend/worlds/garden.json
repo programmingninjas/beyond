@@ -1,0 +1,463 @@
+{
+  "revision": "worlds-v1",
+  "coordinateSystem": {
+    "origin": "top-left",
+    "width": 1920,
+    "height": 1080,
+    "authoringGrid": 64,
+    "participantRadius": 28,
+    "walkSpeedPerSecond": 250,
+    "chatRadius": 280
+  },
+  "room": {
+    "id": "garden",
+    "name": "Connection Garden",
+    "bounds": {
+      "x": 100,
+      "y": 70,
+      "width": 1720,
+      "height": 940
+    },
+    "layers": [
+      {
+        "id": "background",
+        "src": "/worlds/garden/background.svg",
+        "z": 0
+      },
+      {
+        "id": "ground",
+        "src": "/worlds/garden/ground.svg",
+        "z": 10
+      },
+      {
+        "id": "midground",
+        "src": "/worlds/garden/midground.svg",
+        "z": 20
+      },
+      {
+        "id": "foreground",
+        "src": "/worlds/garden/foreground.svg",
+        "z": 40
+      }
+    ],
+    "spawns": [
+      {
+        "id": "from_plaza",
+        "x": 960,
+        "y": 740,
+        "facing": "up"
+      },
+      {
+        "id": "default",
+        "x": 960,
+        "y": 740,
+        "facing": "up"
+      }
+    ],
+    "walkablePolygons": [
+      {
+        "id": "outer-loop",
+        "points": [
+          [
+            260,
+            820
+          ],
+          [
+            210,
+            560
+          ],
+          [
+            320,
+            260
+          ],
+          [
+            690,
+            150
+          ],
+          [
+            1010,
+            210
+          ],
+          [
+            1310,
+            130
+          ],
+          [
+            1670,
+            320
+          ],
+          [
+            1710,
+            690
+          ],
+          [
+            1460,
+            900
+          ],
+          [
+            1030,
+            830
+          ],
+          [
+            700,
+            930
+          ]
+        ]
+      },
+      {
+        "id": "west-bridge",
+        "points": [
+          [
+            640,
+            380
+          ],
+          [
+            1010,
+            380
+          ],
+          [
+            1010,
+            660
+          ],
+          [
+            640,
+            660
+          ]
+        ]
+      },
+      {
+        "id": "south-bridge",
+        "points": [
+          [
+            650,
+            650
+          ],
+          [
+            1200,
+            650
+          ],
+          [
+            1200,
+            900
+          ],
+          [
+            650,
+            900
+          ]
+        ]
+      }
+    ],
+    "colliders": [
+      {
+        "id": "central-pond",
+        "shape": "polygon",
+        "points": [
+          [
+            710,
+            410
+          ],
+          [
+            900,
+            330
+          ],
+          [
+            1120,
+            360
+          ],
+          [
+            1280,
+            500
+          ],
+          [
+            1220,
+            690
+          ],
+          [
+            1010,
+            760
+          ],
+          [
+            790,
+            690
+          ],
+          [
+            650,
+            550
+          ]
+        ]
+      },
+      {
+        "id": "cherry-tree",
+        "shape": "circle",
+        "x": 1450,
+        "y": 430,
+        "radius": 120
+      },
+      {
+        "id": "waterfall",
+        "shape": "aabb",
+        "x": 900,
+        "y": 80,
+        "width": 300,
+        "height": 180
+      },
+      {
+        "id": "west-bench",
+        "shape": "aabb",
+        "x": 260,
+        "y": 580,
+        "width": 180,
+        "height": 58
+      },
+      {
+        "id": "east-bench",
+        "shape": "aabb",
+        "x": 1450,
+        "y": 650,
+        "width": 180,
+        "height": 58
+      },
+      {
+        "id": "south-bench",
+        "shape": "aabb",
+        "x": 490,
+        "y": 740,
+        "width": 180,
+        "height": 58
+      },
+      {
+        "id": "south-bridge-rail-west",
+        "shape": "aabb",
+        "x": 1020,
+        "y": 628,
+        "width": 180,
+        "height": 22
+      },
+      {
+        "id": "south-bridge-rail-east",
+        "shape": "aabb",
+        "x": 650,
+        "y": 900,
+        "width": 550,
+        "height": 22
+      },
+      {
+        "id": "stream-west-bank",
+        "shape": "aabb",
+        "x": 500,
+        "y": 480,
+        "width": 140,
+        "height": 90
+      },
+      {
+        "id": "stream-east-bank",
+        "shape": "aabb",
+        "x": 1010,
+        "y": 480,
+        "width": 300,
+        "height": 90
+      },
+      {
+        "id": "stream-south-west-bank",
+        "shape": "aabb",
+        "x": 500,
+        "y": 740,
+        "width": 140,
+        "height": 80
+      },
+      {
+        "id": "stream-south-east-bank",
+        "shape": "aabb",
+        "x": 1200,
+        "y": 740,
+        "width": 140,
+        "height": 80
+      },
+      {
+        "id": "west-bridge-rail-west",
+        "shape": "aabb",
+        "x": 618,
+        "y": 380,
+        "width": 22,
+        "height": 280
+      },
+      {
+        "id": "west-bridge-rail-east",
+        "shape": "aabb",
+        "x": 1010,
+        "y": 380,
+        "width": 22,
+        "height": 280
+      }
+    ],
+    "portals": [
+      {
+        "id": "garden_to_plaza",
+        "trigger": {
+          "shape": "aabb",
+          "x": 820,
+          "y": 820,
+          "width": 280,
+          "height": 180
+        },
+        "destination": {
+          "roomId": "plaza",
+          "spawnId": "from_garden"
+        },
+        "label": "Return to Discovery Plaza",
+        "priority": 100
+      }
+    ],
+    "interactions": [
+      {
+        "id": "garden_bench_west",
+        "anchor": {
+          "x": 350,
+          "y": 680
+        },
+        "radius": 90,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "garden_west"
+        },
+        "label": "Sit by the garden"
+      },
+      {
+        "id": "garden_bench_east",
+        "anchor": {
+          "x": 1540,
+          "y": 750
+        },
+        "radius": 90,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "garden_east"
+        },
+        "label": "Sit by the garden"
+      },
+      {
+        "id": "garden_conversation_sign",
+        "anchor": {
+          "x": 500,
+          "y": 290
+        },
+        "radius": 105,
+        "priority": 70,
+        "action": {
+          "type": "open_panel",
+          "panel": "conversation_guide"
+        },
+        "label": "Read conversation guide"
+      },
+      {
+        "id": "garden_photo_spot",
+        "anchor": {
+          "x": 1640,
+          "y": 520
+        },
+        "radius": 100,
+        "priority": 30,
+        "action": {
+          "type": "photo_spot"
+        },
+        "label": "Garden photo spot"
+      },
+      {
+        "id": "garden_bench_west_second",
+        "anchor": {
+          "x": 440,
+          "y": 680
+        },
+        "radius": 90,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "garden_west"
+        },
+        "label": "Sit by the garden"
+      },
+      {
+        "id": "garden_bench_east_second",
+        "anchor": {
+          "x": 1510,
+          "y": 800
+        },
+        "radius": 90,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "garden_east"
+        },
+        "label": "Sit by the garden"
+      },
+      {
+        "id": "garden_bench_south",
+        "anchor": {
+          "x": 580,
+          "y": 850
+        },
+        "radius": 90,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "garden_south"
+        },
+        "label": "Sit by the garden"
+      },
+      {
+        "id": "garden_bench_south_second",
+        "anchor": {
+          "x": 740,
+          "y": 850
+        },
+        "radius": 90,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "garden_south"
+        },
+        "label": "Sit by the garden"
+      }
+    ],
+    "seats": [
+      {
+        "id": "garden_west_1",
+        "x": 300,
+        "y": 700,
+        "facing": "up"
+      },
+      {
+        "id": "garden_west_2",
+        "x": 400,
+        "y": 700,
+        "facing": "up"
+      },
+      {
+        "id": "garden_east_1",
+        "x": 1490,
+        "y": 760,
+        "facing": "up"
+      },
+      {
+        "id": "garden_east_2",
+        "x": 1590,
+        "y": 760,
+        "facing": "up"
+      },
+      {
+        "id": "garden_south_1",
+        "x": 530,
+        "y": 860,
+        "facing": "up"
+      },
+      {
+        "id": "garden_south_2",
+        "x": 630,
+        "y": 860,
+        "facing": "up"
+      }
+    ]
+  }
+}

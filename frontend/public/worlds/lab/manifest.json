@@ -1,0 +1,47 @@
+{
+  "roomId": "lab",
+  "label": "Idea Lab",
+  "coordinateSpace": [
+    1920,
+    1080
+  ],
+  "layers": [
+    {
+      "id": "background",
+      "file": "background.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "404a68a89c21329544ebac690a1de8a99f9708d74be4c0693a76a91275afe5c9",
+      "placeholder": true,
+      "z": 0
+    },
+    {
+      "id": "ground",
+      "file": "ground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "955df5d8b6e8296fae5599b0fcb66a27e36fa9b74da469f50d7434129881b8fe",
+      "placeholder": true,
+      "z": 10
+    },
+    {
+      "id": "midground",
+      "file": "midground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "7da7d69d55a1cffd4c2d35e36b40517a6bf432d6e7069d3d0551eb5c46c987a4",
+      "placeholder": true,
+      "z": 20
+    },
+    {
+      "id": "foreground",
+      "file": "foreground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "a7b44200d3fa753cf4f06cdbada510d12cb3f401f3069621d3da854a92101b70",
+      "placeholder": true,
+      "z": 40
+    }
+  ],
+  "source": "Engineering placeholder; replace file content without changing room or layer IDs."
+}

@@ -1,0 +1,47 @@
+{
+  "roomId": "arcade",
+  "label": "Activity Arcade",
+  "coordinateSpace": [
+    1920,
+    1080
+  ],
+  "layers": [
+    {
+      "id": "background",
+      "file": "background.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "1350d204d126266815af5457990adf554b1ba35e8549693e5d964c2ee219eed1",
+      "placeholder": true,
+      "z": 0
+    },
+    {
+      "id": "ground",
+      "file": "ground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "22dd4142664571ec7307a54fe6b1de961889529b2a8fb5a9a3aeb8e771292249",
+      "placeholder": true,
+      "z": 10
+    },
+    {
+      "id": "midground",
+      "file": "midground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "3b89531e2cc26b7c9e4a599b121fd1bb2af875d5cc6818bb598e6e5cb0b3b341",
+      "placeholder": true,
+      "z": 20
+    },
+    {
+      "id": "foreground",
+      "file": "foreground.svg",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "7984c275027ff2c2b043893182906de7c498d7eb606055c0555316604cf35ed4",
+      "placeholder": true,
+      "z": 40
+    }
+  ],
+  "source": "Engineering placeholder; replace file content without changing room or layer IDs."
+}

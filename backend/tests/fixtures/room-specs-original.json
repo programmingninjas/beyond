@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "revision": "worlds-v1",
+  "coordinateSystem": {
+    "origin": "top-left",
+    "width": 1920,
+    "height": 1080,
+    "authoringGrid": 64,
+    "participantRadius": 28,
+    "walkSpeedPerSecond": 250,
+    "chatRadius": 280
+  },
+  "rooms": [
+    {
+      "id": "plaza",
+      "name": "Discovery Plaza",
+      "bounds": {"x": 96, "y": 72, "width": 1728, "height": 936},
+      "layers": [
+        {"id": "background", "src": "/worlds/plaza/background.webp", "z": 0},
+        {"id": "ground", "src": "/worlds/plaza/ground.webp", "z": 10},
+        {"id": "midground", "src": "/worlds/plaza/midground.webp", "z": 20},
+        {"id": "foreground", "src": "/worlds/plaza/foreground.webp", "z": 40}
+      ],
+      "spawns": [
+        {"id": "south_event_entrance", "x": 960, "y": 884, "facing": "up"},
+        {"id": "from_cafe", "x": 960, "y": 230, "facing": "down"},
+        {"id": "from_garden", "x": 1570, "y": 540, "facing": "left"},
+        {"id": "from_arcade", "x": 350, "y": 540, "facing": "right"},
+        {"id": "from_lab", "x": 1450, "y": 820, "facing": "left"},
+        {"id": "default", "x": 960, "y": 884, "facing": "up"}
+      ],
+      "colliders": [
+        {"id": "fountain", "shape": "circle", "x": 960, "y": 540, "radius": 150},
+        {"id": "welcome-board", "shape": "aabb", "x": 820, "y": 110, "width": 280, "height": 76},
+        {"id": "networking-kiosk", "shape": "aabb", "x": 190, "y": 350, "width": 230, "height": 190},
+        {"id": "event-info", "shape": "aabb", "x": 1500, "y": 350, "width": 230, "height": 190},
+        {"id": "bench-nw", "shape": "aabb", "x": 590, "y": 360, "width": 180, "height": 54},
+        {"id": "bench-ne", "shape": "aabb", "x": 1150, "y": 360, "width": 180, "height": 54},
+        {"id": "bench-sw", "shape": "aabb", "x": 590, "y": 690, "width": 180, "height": 54},
+        {"id": "bench-se", "shape": "aabb", "x": 1150, "y": 690, "width": 180, "height": 54}
+      ],
+      "portals": [
+        {"id": "plaza_to_cafe", "trigger": {"shape": "aabb", "x": 820, "y": 72, "width": 280, "height": 110}, "destination": {"roomId": "cafe", "spawnId": "from_plaza"}, "label": "Enter Conversation Café", "priority": 100},
+        {"id": "plaza_to_garden", "trigger": {"shape": "aabb", "x": 1714, "y": 430, "width": 110, "height": 220}, "destination": {"roomId": "garden", "spawnId": "from_plaza"}, "label": "Enter Connection Garden", "priority": 100},
+        {"id": "plaza_to_arcade", "trigger": {"shape": "aabb", "x": 96, "y": 430, "width": 110, "height": 220}, "destination": {"roomId": "arcade", "spawnId": "from_plaza"}, "label": "Enter Activity Arcade", "priority": 100},
+        {"id": "plaza_to_lab", "trigger": {"shape": "aabb", "x": 1480, "y": 870, "width": 240, "height": 138}, "destination": {"roomId": "lab", "spawnId": "from_plaza"}, "label": "Enter Idea Lab", "priority": 100}
+      ],
+      "interactions": [
+        {"id": "plaza_networking_kiosk", "anchor": {"x": 455, "y": 460}, "radius": 115, "priority": 90, "action": {"type": "open_existing_view", "view": "people"}, "label": "Open networking circles"},
+        {"id": "plaza_welcome_board", "anchor": {"x": 960, "y": 220}, "radius": 120, "priority": 80, "action": {"type": "open_panel", "panel": "event_welcome"}, "label": "Read welcome board"},
+        {"id": "plaza_event_info", "anchor": {"x": 1465, "y": 460}, "radius": 115, "priority": 80, "action": {"type": "open_panel", "panel": "event_info"}, "label": "View event information"},
+        {"id": "plaza_bench_nw", "anchor": {"x": 680, "y": 445}, "radius": 86, "priority": 40, "action": {"type": "seat", "seatGroup": "plaza_nw"}, "label": "Sit on bench"},
+        {"id": "plaza_bench_ne", "anchor": {"x": 1240, "y": 445}, "radius": 86, "priority": 40, "action": {"type": "seat", "seatGroup": "plaza_ne"}, "label": "Sit on bench"}
+      ]
+    },
+    {
+      "id": "cafe",
+      "name": "Conversation Café",
+      "bounds": {"x": 120, "y": 90, "width": 1680, "height": 900},
+      "layers": [
+        {"id": "background", "src": "/worlds/cafe/background.webp", "z": 0},
+        {"id": "ground", "src": "/worlds/cafe/ground.webp", "z": 10},
+        {"id": "midground", "src": "/worlds/cafe/midground.webp", "z": 20},
+        {"id": "foreground", "src": "/worlds/cafe/foreground.webp", "z": 40}
+      ],
+      "spawns": [
+        {"id": "from_plaza", "x": 960, "y": 890, "facing": "up"},
+        {"id": "default", "x": 960, "y": 890, "facing": "up"}
+      ],
+      "colliders": [
+        {"id": "counter", "shape": "aabb", "x": 650, "y": 120, "width": 620, "height": 150},
+        {"id": "west-sofa", "shape": "aabb", "x": 170, "y": 380, "width": 260, "height": 120},
+        {"id": "east-sofa", "shape": "aabb", "x": 1490, "y": 380, "width": 260, "height": 120},
+        {"id": "table-west", "shape": "circle", "x": 600, "y": 590, "radius": 105},
+        {"id": "table-center", "shape": "circle", "x": 960, "y": 530, "radius": 110},
+        {"id": "table-east", "shape": "circle", "x": 1320, "y": 590, "radius": 105},
+        {"id": "meeting-board", "shape": "aabb", "x": 1450, "y": 160, "width": 220, "height": 70}
+      ],
+      "portals": [
+        {"id": "cafe_to_plaza", "trigger": {"shape": "aabb", "x": 820, "y": 900, "width": 280, "height": 90}, "destination": {"roomId": "plaza", "spawnId": "from_cafe"}, "label": "Return to Discovery Plaza", "priority": 100}
+      ],
+      "interactions": [
+        {"id": "cafe_table_west", "anchor": {"x": 600, "y": 740}, "radius": 90, "priority": 50, "action": {"type": "seat", "seatGroup": "cafe_west"}, "label": "Join west table"},
+        {"id": "cafe_table_center", "anchor": {"x": 960, "y": 680}, "radius": 90, "priority": 50, "action": {"type": "seat", "seatGroup": "cafe_center"}, "label": "Join center table"},
+        {"id": "cafe_table_east", "anchor": {"x": 1320, "y": 740}, "radius": 90, "priority": 50, "action": {"type": "seat", "seatGroup": "cafe_east"}, "label": "Join east table"},
+        {"id": "cafe_meeting_board", "anchor": {"x": 1415, "y": 250}, "radius": 110, "priority": 70, "action": {"type": "open_panel", "panel": "nearby_chat_guide"}, "label": "Read meeting guide"},
+        {"id": "cafe_counter", "anchor": {"x": 960, "y": 330}, "radius": 110, "priority": 40, "action": {"type": "open_panel", "panel": "cafe_info"}, "label": "Visit café counter"}
+      ]
+    },
+    {
+      "id": "garden",
+      "name": "Connection Garden",
+      "bounds": {"x": 100, "y": 70, "width": 1720, "height": 940},
+      "layers": [
+        {"id": "background", "src": "/worlds/garden/background.webp", "z": 0},
+        {"id": "ground", "src": "/worlds/garden/ground.webp", "z": 10},
+        {"id": "midground", "src": "/worlds/garden/midground.webp", "z": 20},
+        {"id": "foreground", "src": "/worlds/garden/foreground.webp", "z": 40}
+      ],
+      "spawns": [
+        {"id": "from_plaza", "x": 960, "y": 900, "facing": "up"},
+        {"id": "default", "x": 960, "y": 900, "facing": "up"}
+      ],
+      "walkablePolygons": [
+        {"id": "outer-loop", "points": [[260,820],[210,560],[320,260],[690,150],[1010,210],[1310,130],[1670,320],[1710,690],[1460,900],[1030,830],[700,930]]},
+        {"id": "west-bridge", "points": [[650,460],[900,420],[930,520],[680,560]]},
+        {"id": "south-bridge", "points": [[880,690],[1050,690],[1050,910],[880,910]]}
+      ],
+      "colliders": [
+        {"id": "central-pond", "shape": "polygon", "points": [[710,410],[900,330],[1120,360],[1280,500],[1220,690],[1010,760],[790,690],[650,550]]},
+        {"id": "cherry-tree", "shape": "circle", "x": 1450, "y": 430, "radius": 120},
+        {"id": "waterfall", "shape": "aabb", "x": 900, "y": 80, "width": 300, "height": 180},
+        {"id": "west-bench", "shape": "aabb", "x": 260, "y": 580, "width": 180, "height": 58},
+        {"id": "east-bench", "shape": "aabb", "x": 1450, "y": 650, "width": 180, "height": 58}
+      ],
+      "portals": [
+        {"id": "garden_to_plaza", "trigger": {"shape": "aabb", "x": 820, "y": 920, "width": 280, "height": 90}, "destination": {"roomId": "plaza", "spawnId": "from_garden"}, "label": "Return to Discovery Plaza", "priority": 100}
+      ],
+      "interactions": [
+        {"id": "garden_bench_west", "anchor": {"x": 350, "y": 680}, "radius": 90, "priority": 50, "action": {"type": "seat", "seatGroup": "garden_west"}, "label": "Sit by the garden"},
+        {"id": "garden_bench_east", "anchor": {"x": 1540, "y": 750}, "radius": 90, "priority": 50, "action": {"type": "seat", "seatGroup": "garden_east"}, "label": "Sit by the garden"},
+        {"id": "garden_conversation_sign", "anchor": {"x": 500, "y": 290}, "radius": 105, "priority": 70, "action": {"type": "open_panel", "panel": "conversation_guide"}, "label": "Read conversation guide"},
+        {"id": "garden_photo_spot", "anchor": {"x": 1450, "y": 570}, "radius": 100, "priority": 30, "action": {"type": "photo_spot"}, "label": "Garden photo spot"}
+      ]
+    },
+    {
+      "id": "arcade",
+      "name": "Activity Arcade",
+      "bounds": {"x": 120, "y": 90, "width": 1680, "height": 900},
+      "layers": [
+        {"id": "background", "src": "/worlds/arcade/background.webp", "z": 0},
+        {"id": "ground", "src": "/worlds/arcade/ground.webp", "z": 10},
+        {"id": "midground", "src": "/worlds/arcade/midground.webp", "z": 20},
+        {"id": "foreground", "src": "/worlds/arcade/foreground.webp", "z": 40}
+      ],
+      "spawns": [
+        {"id": "from_plaza", "x": 1520, "y": 850, "facing": "up"},
+        {"id": "default", "x": 1520, "y": 850, "facing": "up"}
+      ],
+      "colliders": [
+        {"id": "west-machines", "shape": "aabb", "x": 150, "y": 250, "width": 250, "height": 460},
+        {"id": "east-machines", "shape": "aabb", "x": 1520, "y": 250, "width": 250, "height": 390},
+        {"id": "game-table", "shape": "circle", "x": 980, "y": 590, "radius": 150},
+        {"id": "leaderboard", "shape": "aabb", "x": 1210, "y": 130, "width": 300, "height": 75},
+        {"id": "prize-shelf", "shape": "aabb", "x": 1300, "y": 700, "width": 220, "height": 100}
+      ],
+      "portals": [
+        {"id": "arcade_to_plaza", "trigger": {"shape": "aabb", "x": 1480, "y": 900, "width": 260, "height": 90}, "destination": {"roomId": "plaza", "spawnId": "from_arcade"}, "label": "Return to Discovery Plaza", "priority": 100}
+      ],
+      "interactions": [
+        {"id": "arcade_machine_west", "anchor": {"x": 470, "y": 480}, "radius": 105, "priority": 70, "action": {"type": "activity_placeholder", "activity": "arcade_machine"}, "label": "Try arcade station"},
+        {"id": "arcade_machine_east", "anchor": {"x": 1450, "y": 480}, "radius": 105, "priority": 70, "action": {"type": "activity_placeholder", "activity": "arcade_machine"}, "label": "Try arcade station"},
+        {"id": "arcade_game_table", "anchor": {"x": 980, "y": 790}, "radius": 110, "priority": 75, "action": {"type": "activity_placeholder", "activity": "game_table"}, "label": "Open game table"},
+        {"id": "arcade_leaderboard", "anchor": {"x": 1360, "y": 250}, "radius": 105, "priority": 50, "action": {"type": "open_panel", "panel": "leaderboard_placeholder"}, "label": "View leaderboard"},
+        {"id": "arcade_dance_floor", "anchor": {"x": 690, "y": 370}, "radius": 145, "priority": 30, "action": {"type": "activity_placeholder", "activity": "dance_floor"}, "label": "Step onto light floor"}
+      ]
+    },
+    {
+      "id": "lab",
+      "name": "Idea Lab",
+      "bounds": {"x": 120, "y": 90, "width": 1680, "height": 900},
+      "layers": [
+        {"id": "background", "src": "/worlds/lab/background.webp", "z": 0},
+        {"id": "ground", "src": "/worlds/lab/ground.webp", "z": 10},
+        {"id": "midground", "src": "/worlds/lab/midground.webp", "z": 20},
+        {"id": "foreground", "src": "/worlds/lab/foreground.webp", "z": 40}
+      ],
+      "spawns": [
+        {"id": "from_plaza", "x": 1530, "y": 850, "facing": "up"},
+        {"id": "default", "x": 1530, "y": 850, "facing": "up"}
+      ],
+      "colliders": [
+        {"id": "project-board", "shape": "aabb", "x": 680, "y": 110, "width": 560, "height": 90},
+        {"id": "whiteboard", "shape": "aabb", "x": 160, "y": 250, "width": 260, "height": 80},
+        {"id": "idea-shelves", "shape": "aabb", "x": 1500, "y": 230, "width": 240, "height": 310},
+        {"id": "table-main", "shape": "aabb", "x": 680, "y": 430, "width": 560, "height": 180},
+        {"id": "table-round", "shape": "circle", "x": 1360, "y": 680, "radius": 120},
+        {"id": "soft-seating", "shape": "aabb", "x": 220, "y": 680, "width": 280, "height": 130}
+      ],
+      "portals": [
+        {"id": "lab_to_plaza", "trigger": {"shape": "aabb", "x": 1490, "y": 900, "width": 250, "height": 90}, "destination": {"roomId": "plaza", "spawnId": "from_lab"}, "label": "Return to Discovery Plaza", "priority": 100}
+      ],
+      "interactions": [
+        {"id": "lab_project_board", "anchor": {"x": 960, "y": 275}, "radius": 120, "priority": 80, "action": {"type": "open_panel", "panel": "project_board"}, "label": "View project board"},
+        {"id": "lab_whiteboard", "anchor": {"x": 450, "y": 290}, "radius": 105, "priority": 60, "action": {"type": "open_panel", "panel": "whiteboard_placeholder"}, "label": "View whiteboard"},
+        {"id": "lab_idea_shelf", "anchor": {"x": 1430, "y": 410}, "radius": 105, "priority": 50, "action": {"type": "open_panel", "panel": "idea_shelf"}, "label": "Browse idea shelf"},
+        {"id": "lab_table_main", "anchor": {"x": 960, "y": 700}, "radius": 100, "priority": 50, "action": {"type": "seat", "seatGroup": "lab_main"}, "label": "Join collaboration table"},
+        {"id": "lab_table_round", "anchor": {"x": 1360, "y": 840}, "radius": 90, "priority": 50, "action": {"type": "seat", "seatGroup": "lab_round"}, "label": "Join discussion table"}
+      ]
+    }
+  ]
+}

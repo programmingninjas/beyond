@@ -1,0 +1,190 @@
+{
+  "revision": "worlds-v1",
+  "coordinateSystem": {
+    "origin": "top-left",
+    "width": 1920,
+    "height": 1080,
+    "authoringGrid": 64,
+    "participantRadius": 28,
+    "walkSpeedPerSecond": 250,
+    "chatRadius": 280
+  },
+  "room": {
+    "id": "arcade",
+    "name": "Activity Arcade",
+    "bounds": {
+      "x": 120,
+      "y": 90,
+      "width": 1680,
+      "height": 900
+    },
+    "layers": [
+      {
+        "id": "background",
+        "src": "/worlds/arcade/background.svg",
+        "z": 0
+      },
+      {
+        "id": "ground",
+        "src": "/worlds/arcade/ground.svg",
+        "z": 10
+      },
+      {
+        "id": "midground",
+        "src": "/worlds/arcade/midground.svg",
+        "z": 20
+      },
+      {
+        "id": "foreground",
+        "src": "/worlds/arcade/foreground.svg",
+        "z": 40
+      }
+    ],
+    "spawns": [
+      {
+        "id": "from_plaza",
+        "x": 470,
+        "y": 540,
+        "facing": "right"
+      },
+      {
+        "id": "default",
+        "x": 470,
+        "y": 540,
+        "facing": "right"
+      }
+    ],
+    "colliders": [
+      {
+        "id": "west-machines",
+        "shape": "aabb",
+        "x": 150,
+        "y": 250,
+        "width": 250,
+        "height": 460
+      },
+      {
+        "id": "east-machines",
+        "shape": "aabb",
+        "x": 1520,
+        "y": 250,
+        "width": 250,
+        "height": 390
+      },
+      {
+        "id": "game-table",
+        "shape": "circle",
+        "x": 980,
+        "y": 590,
+        "radius": 150
+      },
+      {
+        "id": "leaderboard",
+        "shape": "aabb",
+        "x": 1210,
+        "y": 130,
+        "width": 300,
+        "height": 75
+      },
+      {
+        "id": "prize-shelf",
+        "shape": "aabb",
+        "x": 1300,
+        "y": 700,
+        "width": 220,
+        "height": 100
+      }
+    ],
+    "portals": [
+      {
+        "id": "arcade_to_plaza",
+        "trigger": {
+          "shape": "aabb",
+          "x": 1480,
+          "y": 900,
+          "width": 260,
+          "height": 90
+        },
+        "destination": {
+          "roomId": "plaza",
+          "spawnId": "from_arcade"
+        },
+        "label": "Return to Discovery Plaza",
+        "priority": 100
+      }
+    ],
+    "interactions": [
+      {
+        "id": "arcade_machine_west",
+        "anchor": {
+          "x": 470,
+          "y": 480
+        },
+        "radius": 105,
+        "priority": 70,
+        "action": {
+          "type": "activity_placeholder",
+          "activity": "arcade_machine"
+        },
+        "label": "Try arcade station"
+      },
+      {
+        "id": "arcade_machine_east",
+        "anchor": {
+          "x": 1450,
+          "y": 480
+        },
+        "radius": 105,
+        "priority": 70,
+        "action": {
+          "type": "activity_placeholder",
+          "activity": "arcade_machine"
+        },
+        "label": "Try arcade station"
+      },
+      {
+        "id": "arcade_game_table",
+        "anchor": {
+          "x": 980,
+          "y": 790
+        },
+        "radius": 110,
+        "priority": 75,
+        "action": {
+          "type": "activity_placeholder",
+          "activity": "game_table"
+        },
+        "label": "Open game table"
+      },
+      {
+        "id": "arcade_leaderboard",
+        "anchor": {
+          "x": 1360,
+          "y": 250
+        },
+        "radius": 105,
+        "priority": 50,
+        "action": {
+          "type": "open_panel",
+          "panel": "leaderboard_placeholder"
+        },
+        "label": "View leaderboard"
+      },
+      {
+        "id": "arcade_dance_floor",
+        "anchor": {
+          "x": 690,
+          "y": 370
+        },
+        "radius": 145,
+        "priority": 30,
+        "action": {
+          "type": "activity_placeholder",
+          "activity": "dance_floor"
+        },
+        "label": "Step onto light floor"
+      }
+    ],
+    "seats": []
+  }
+}
