@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: beyond
+      POSTGRES_PASSWORD: beyond
+      POSTGRES_DB: beyond
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U beyond"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://beyond:beyond@db:5432/beyond
+      SECRET_KEY: ${SECRET_KEY:-local-development-change-me}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      FRONTEND_ORIGIN: http://localhost:3000
+    ports: ["8000:8000"]
+    depends_on:
+      db:
+        condition: service_healthy
+  web:
+    build: ./frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports: ["3000:3000"]
+    depends_on: [api]
+volumes:
+  postgres_data:
