@@ -255,6 +255,62 @@ def test_each_portal_has_a_reachable_threshold_and_safe_named_spawn(client):
             assert spawn['id']==dest['spawnId'] and not world.blocked(destination,spawn['x'],spawn['y'])
 
 
+def test_world_validator_rejects_duplicate_ids_missing_destinations_and_bad_geometry(client):
+    import copy
+    import world
+    base=copy.deepcopy(world.ROOMS['plaza'])
+    duplicate=copy.deepcopy(base)
+    duplicate['colliders'].append(copy.deepcopy(duplicate['colliders'][0]))
+    with pytest.raises(ValueError,match='duplicate colliders id'):
+        world._validate_room(duplicate,world.ROOMS)
+    missing=copy.deepcopy(base)
+    missing['portals'][0]['destination']['spawnId']='missing-spawn'
+    with pytest.raises(ValueError,match='invalid destination'):
+        world._validate_room(missing,world.ROOMS)
+    invalid=copy.deepcopy(base)
+    invalid['colliders'][0]['shape']='unknown'
+    with pytest.raises(ValueError,match='invalid unknown geometry'):
+        world._validate_room(invalid,world.ROOMS)
+    out_of_bounds=copy.deepcopy(base)
+    out_of_bounds['interactions'][0]['anchor']['x']=2000
+    with pytest.raises(ValueError,match='invalid interaction anchor'):
+        world._validate_room(out_of_bounds,world.ROOMS)
+
+
+def test_world_loader_rejects_duplicate_room_ids(client, monkeypatch, tmp_path):
+    import json
+    import world
+    source=json.loads((world.WORLD_DIR/'plaza.json').read_text(encoding='utf-8'))
+    (tmp_path/'a.json').write_text(json.dumps(source),encoding='utf-8')
+    (tmp_path/'b.json').write_text(json.dumps(source),encoding='utf-8')
+    monkeypatch.setattr(world,'WORLD_DIR',tmp_path)
+    with pytest.raises(ValueError,match='duplicate room id'):
+        world.load_worlds()
+
+
+def test_world_validator_rejects_overlapping_spawns_anchors_seats_and_trigger_spawns(client):
+    import copy
+    import world
+    base=copy.deepcopy(world.ROOMS['plaza'])
+    spawn_overlap=copy.deepcopy(base)
+    spawn=next(s for s in spawn_overlap['spawns'] if s['id']=='default')
+    spawn_overlap['colliders'].append({'id':'spawn-blocker','shape':'aabb','x':spawn['x']-10,'y':spawn['y']-10,'width':20,'height':20})
+    with pytest.raises(ValueError,match='unsafe spawn'):
+        world._validate_room(spawn_overlap,world.ROOMS)
+    anchor_overlap=copy.deepcopy(base)
+    anchor_overlap['interactions'][1]['anchor']={'x':600,'y':140}
+    with pytest.raises(ValueError,match='interaction anchor overlaps blocked geometry'):
+        world._validate_room(anchor_overlap,world.ROOMS)
+    seat_overlap=copy.deepcopy(base)
+    seat_overlap['seats'][0].update(x=960,y=540)
+    with pytest.raises(ValueError,match='seat overlaps blocked geometry'):
+        world._validate_room(seat_overlap,world.ROOMS)
+    spawn_in_portal=copy.deepcopy(base)
+    spawn_in_portal['spawns'][0].update(x=960,y=127)
+    with pytest.raises(ValueError,match='unsafe spawn'):
+        world._validate_room(spawn_in_portal,world.ROOMS)
+
+
 def test_original_room_specs_fail_reachability_validation(client):
     import json
     import world
