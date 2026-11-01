@@ -3,7 +3,14 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import {V2Panel, Discovery, PersonalityQuiz, RegistrationForm, RegistrationFieldsEditor, ProfileImport} from './v2';
 import WorldView from '../components/world/WorldView';
 
-const API = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : 'http://localhost:8000');
+const API = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? (window.location.port === '3000' ? `${window.location.protocol}//${window.location.hostname}:8000` : `${window.location.origin}/api`) : 'http://localhost:8000');
+const toWs = (url: string) => {
+  if (url.startsWith('http')) return url.replace(/^http/, 'ws');
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}${url}`;
+  }
+  return `ws://localhost:8000${url}`;
+};
 type Person = {id:number; name:string; bio:string; interests:string; profile_url:string; personality?:string; same_personality?:boolean; shared_interests?:string[]; x?:number; y?:number; direction?:string; walking?:boolean; room_id?:string};
 type EventItem = {id:number; owner_id:number; organizer:string; title:string; description:string; category:string; location:string; starts_at:string; ends_at:string; published:boolean; registered:boolean; attendees:number};
 type Connection = {id:number; user:Person; accepted:boolean; incoming:boolean};
@@ -32,14 +39,14 @@ export default function Home(){
    call('/me').then(data=>{if(!stopped){setMe(data);if(liveState.current.view!=='profile')setProfile(data)}}).catch(()=>{});
    if(state.view==='connections'&&state.chatWith)call(`/messages/${state.chatWith.id}`).then(data=>{if(!stopped&&liveState.current.chatWith?.id===state.chatWith?.id)setMessages(data)}).catch(()=>{});
   };
-  const connect=()=>{if(stopped)return;ws=new WebSocket(API.replace(/^http/,'ws')+`/ws/updates?token=${encodeURIComponent(token)}`);ws.onopen=sync;ws.onmessage=()=>{if(timer)clearTimeout(timer);timer=setTimeout(()=>{sync();window.dispatchEvent(new Event('beyond-data-changed'))},50)};ws.onclose=()=>{if(!stopped)retry=setTimeout(connect,2000)};ws.onerror=()=>ws?.close()};
+  const connect=()=>{if(stopped)return;ws=new WebSocket(toWs(API)+`/ws/updates?token=${encodeURIComponent(token)}`);ws.onopen=sync;ws.onmessage=()=>{if(timer)clearTimeout(timer);timer=setTimeout(()=>{sync();window.dispatchEvent(new Event('beyond-data-changed'))},50)};ws.onclose=()=>{if(!stopped)retry=setTimeout(connect,2000)};ws.onerror=()=>ws?.close()};
   connect();const resume=()=>{if(document.visibilityState==='visible'){sync();if(!ws||ws.readyState===WebSocket.CLOSED){if(retry)clearTimeout(retry);connect()}}};document.addEventListener('visibilitychange',resume);
   return()=>{stopped=true;if(retry)clearTimeout(retry);if(timer)clearTimeout(timer);document.removeEventListener('visibilitychange',resume);ws?.close()};
  },[token,call]);
  useEffect(()=>{if(selected){const fresh=events.find(e=>e.id===selected.id);if(fresh)setSelected(fresh)}},[events]);
  useEffect(()=>{if(view!=='room'||!selected||!token)return;let stopped=false;let ws:WebSocket|null=null;let retry:ReturnType<typeof setTimeout>|undefined;
   setRoomState('Connecting…');setRoomChat([]);setRoomTarget(null);position.current=null;setServerPosition(null);setWorldInteraction(null);
-  const connect=()=>{if(stopped)return;ws=new WebSocket(API.replace(/^http/,'ws')+`/ws/events/${selected.id}?token=${encodeURIComponent(token)}`);const current=ws;socket.current=current;
+  const connect=()=>{if(stopped)return;ws=new WebSocket(toWs(API)+`/ws/events/${selected.id}?token=${encodeURIComponent(token)}`);const current=ws;socket.current=current;
    current.onopen=()=>setRoomState('Live now');current.onmessage=(e)=>{const d=JSON.parse(e.data);if(d.type==='presence'){setOccupants(d.participants);const self=d.participants.find((p:Person)=>p.id===me?.id);if(self&&(!position.current||self.room_id!==worldRoom)){position.current={x:self.x!,y:self.y!,direction:self.direction||'down'};setServerPosition({...position.current})}}if(d.type==='position'){position.current={x:d.x,y:d.y,direction:d.direction||position.current?.direction||'down'};setServerPosition({...position.current})}if(d.type==='room_changed'){setWorldRoom(d.room_id);position.current={x:d.x,y:d.y,direction:d.direction||'down'};setServerPosition({...position.current});setRoomTarget(null)}if(d.type==='interaction_result')setWorldInteraction({...d,received_at:Date.now()});if(d.type==='world_error')setRoomError(d.message);if(d.type==='chat')setRoomChat(old=>[...old.slice(-99),d]);if(d.type==='chat_error')setRoomError(d.message)};
    current.onclose=(e)=>{if(stopped||socket.current!==current)return;socket.current=null;position.current=null;setServerPosition(null);setOccupants([]);if(e.code===4403||e.code===4401){setRoomState('Room closed or access expired');return}setRoomState('Connection lost. Reconnecting…');retry=setTimeout(connect,2000)};current.onerror=()=>current.close();
   };connect();return()=>{stopped=true;if(retry)clearTimeout(retry);ws?.close();socket.current=null;position.current=null;setServerPosition(null);setOccupants([])}

@@ -1,0 +1,59 @@
+services:
+  beyond-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: beyond
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-beyond}
+      POSTGRES_DB: beyond
+    volumes:
+      - beyond_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U beyond"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  beyond-backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://beyond:${POSTGRES_PASSWORD:-beyond}@beyond-db:5432/beyond
+      SECRET_KEY: ${SECRET_KEY:-local-development-change-me}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      EXA_API_KEY: ${EXA_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-https://beyond.shebuildsecosystem.com}
+    expose:
+      - "8000"
+    depends_on:
+      beyond-db:
+        condition: service_healthy
+    networks:
+      default: {}
+      caddy:
+        aliases:
+          - beyond-backend
+
+  beyond-frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://beyond.shebuildsecosystem.com/api}
+        NEXT_PUBLIC_WORLD_ROOM_TABS: ${NEXT_PUBLIC_WORLD_ROOM_TABS:-0}
+        NEXT_PUBLIC_WORLD_DEBUG: ${NEXT_PUBLIC_WORLD_DEBUG:-0}
+    expose:
+      - "3000"
+    depends_on:
+      - beyond-backend
+    networks:
+      default: {}
+      caddy:
+        aliases:
+          - beyond-frontend
+
+volumes:
+  beyond_postgres_data:
+
+networks:
+  caddy:
+    external: true
+    name: cognitive-dr-backend_default

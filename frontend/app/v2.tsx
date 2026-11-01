@@ -1,7 +1,7 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
 
-const API = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : 'http://localhost:8000');
+const API = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? (window.location.port === '3000' ? `${window.location.protocol}//${window.location.hostname}:8000` : `${window.location.origin}/api`) : 'http://localhost:8000');
 const profileFields = [['phone','Phone number'],['projects','Projects'],['experience','Experience'],['achievements','Achievements'],['website','Personal website'],['additional_social','Additional social links'],['networking_goals','Networking goals'],['headline','Professional headline'],['role','Current role'],['organization','Organization or school'],['skills','Skills'],['expertise','Areas of expertise'],['industry','Industry']];
 const personaFields = [['attending','Why are you attending?'],['seeking','What are you looking for?'],['offering','What can you offer?'],['projects','Current projects'],['topics','Topics to discuss']];
 const shareFields = ['name','bio','interests','headline','role','organization','skills','expertise','industry','attending','seeking','offering','projects','topics'];
