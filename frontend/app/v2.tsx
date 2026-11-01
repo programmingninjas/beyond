@@ -38,7 +38,7 @@ export function Discovery({token,eventId}:{token:string;eventId:number}) {
 
 const avatarSpecies:Record<string,string>={'red-panda':'Red panda',axolotl:'Axolotl','sunda-pangolin':'Sunda pangolin',kakapo:'Kākāpō',vaquita:'Vaquita'};
 const petDefaults={pet_name:'Spark',pet_color:'#c4b5fd',pet_style:'curious',avatar:'red-panda',owner_name:'Your match'};
-function petTint(hex:string){const safe=/^#[\da-f]{6}$/i.test(hex)?hex:'#c4b5fd';const n=parseInt(safe.slice(1),16);const mix=(shift:number)=>Math.round(((n>>shift)&255)*.14+255*.86).toString(16).padStart(2,'0');return `#${mix(16)}${mix(8)}${mix(0)}`}
+function petTint(hex:string){const safe=/^#[\da-f]{6}$/i.test(hex)?hex:'#c4b5fd';const n=parseInt(safe.slice(1),16);const mix=(shift:number)=>Math.round(((n>>shift)&255)*.32+31*.68).toString(16).padStart(2,'0');return `#${mix(16)}${mix(8)}${mix(0)}`}
 function petForeground(hex:string){const n=parseInt(hex.replace('#',''),16);const r=n>>16,g=(n>>8)&255,b=n&255;return (r*299+g*587+b*114)/1000>155?'#24352b':'#ffffff'}
 function titleCase(value:string){return value.replace(/[-_]+/g,' ').replace(/\b\w/g,char=>char.toUpperCase())}
 
@@ -50,6 +50,7 @@ export function Conversation({token,introId}:{token:string;introId:number}) {
  const [playing,setPlaying]=useState(false);
  const [busy,setBusy]=useState(false);
  const [connected,setConnected]=useState(false);
+ const [decisionNotice,setDecisionNotice]=useState('');
  const threadRef=useRef<HTMLDivElement>(null);
  async function call(suffix:string,options:RequestInit={}){
   let response:Response;
@@ -93,9 +94,9 @@ export function Conversation({token,introId}:{token:string;introId:number}) {
   finally{setBusy(false)}
  }
  async function decide(action:string){
-  setBusy(true);
-  try{const result=await call('decision',{method:'POST',body:JSON.stringify({decision:action})});setConnected(result.connected);setError('');await load()}
-  catch{setError("Couldn't reach the server. Retrying…")}
+  setBusy(true);setDecisionNotice('');
+  try{const result=await call('decision',{method:'POST',body:JSON.stringify({decision:action})});setConnected(result.connected);setError('');setDecisionNotice(result.connected?'You’re connected. You can now continue the conversation in your connections.':action==='accept'?'Your acceptance is saved. We’ll connect you when the other owner accepts.':action==='decline'?'This introduction has been declined.':'Your acceptance has been withdrawn.');await load()}
+  catch{setDecisionNotice("We couldn’t save your decision. Please try again.")}
   finally{setBusy(false)}
  }
  const petCard=(pet:any,side:'mine'|'theirs',label:string)=>{
@@ -141,7 +142,7 @@ export function Conversation({token,introId}:{token:string;introId:number}) {
    </div>
    <section className="conversation-discoveries"><div><p className="mini-label">SHARED THREADS</p><h4>Discoveries</h4></div><div className="discovery-cards">{(convo.highlights||[]).map((highlight:string,index:number)=><article className="discovery-card" key={`${highlight}-${index}`}><span aria-hidden="true">✦</span><p>{highlight}</p></article>)}</div></section>
    <section className="conversation-summary"><h4>Why might you meet?</h4><p>{convo.summary}</p></section>
-   <section className="conversation-decision"><div><p className="mini-label">YOUR INTRODUCTION</p><h4>{connected?'You’re connected':`Your decision: ${titleCase(data.your_decision||'pending')}`}</h4><p>{connected?'You can continue the conversation in your connections.':'Accept to connect, decline to close this introduction, or withdraw your pending acceptance.'}</p></div><div className="conversation-decision-actions"><button className="button primary" disabled={busy||connected} onClick={()=>decide('accept')}>Accept introduction</button><button className="button outline" disabled={busy||connected} onClick={()=>decide('decline')}>Decline</button><button className="conversation-withdraw" disabled={busy||data.your_decision!=='accept'} onClick={()=>decide('withdraw')}>Withdraw acceptance</button></div></section>
+   {(()=>{const isConnected=connected||data.connected;const decision=data.your_decision||'pending';const waiting=decision==='accept'&&!isConnected;const declined=decision==='decline';return <section className="conversation-decision"><div><p className="mini-label">YOUR INTRODUCTION</p><h4>{isConnected?'You’re connected':waiting?`Waiting for ${theirPet.owner_name||'the other owner'}`:declined?'Introduction declined':'Ready to connect?'}</h4><p>{isConnected?'You can continue the conversation in your connections.':waiting?'Your acceptance is saved. We’ll connect you when the other owner accepts.':declined?'This introduction is closed.':'Accept to connect, or decline to close this introduction.'}</p>{decisionNotice&&<p className="conversation-decision-notice" role="status">{decisionNotice}</p>}</div><div className="conversation-decision-actions">{decision==='pending'&&<><button className="button primary" disabled={busy} onClick={()=>decide('accept')}>Accept introduction</button><button className="button outline" disabled={busy} onClick={()=>decide('decline')}>Decline</button></>}{waiting&&<button className="conversation-withdraw" disabled={busy} onClick={()=>decide('withdraw')}>Withdraw acceptance</button>}</div></section>})()}
   </>}
  </section>
 }

@@ -121,6 +121,7 @@ def install(app, Base, SessionLocal, current_user, User, Event, Registration, Co
             'conversation':row.data if row else None,
             'job':job_data(job) if job else None,
             'your_decision':(row.requester_decision if intro.requester_id==user.id else row.recipient_decision) if row else 'pending',
+            'connected':bool(row and row.requester_decision=='accept' and row.recipient_decision=='accept'),
             'pets':{
                 'viewer_side':'requester' if intro.requester_id==user.id else 'recipient',
                 'requester':pet_details(intro.requester_id),

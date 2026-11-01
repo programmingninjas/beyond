@@ -115,6 +115,7 @@ def test_matching_and_conversation_are_cached_and_authorized(client, monkeypatch
     client.post(f'/v2/introductions/{intro}/generate',headers=a)
     convo=await_value(f'/v2/introductions/{intro}/conversation',a,'conversation')
     assert convo['conversation']['summary']=='They may collaborate.'
+    assert convo['connected'] is False
     assert convo['pets']['viewer_side']=='requester'
     assert convo['pets']['requester']=={'pet_name':'Mochi','pet_color':'#9c6ade','pet_style':'calm','avatar':'axolotl','owner_name':'alice'}
     assert convo['pets']['recipient']=={'pet_name':'Spark','pet_color':'#c4b5fd','pet_style':'curious','avatar':'red-panda','owner_name':'bob'}
@@ -126,6 +127,7 @@ def test_matching_and_conversation_are_cached_and_authorized(client, monkeypatch
     assert recipient_view['pets']['recipient']['pet_name']=='Spark'
     assert not client.post(f'/v2/introductions/{intro}/decision',headers=a,json={'decision':'accept'}).json()['connected']
     assert client.post(f'/v2/introductions/{intro}/decision',headers=b,json={'decision':'accept'}).json()['connected']
+    assert client.get(f'/v2/introductions/{intro}/conversation',headers=a).json()['connected'] is True
     assert client.get(f'/messages/{bob}',headers=a).status_code==200
     client.get(f'/v2/introductions/{intro}/conversation',headers=a)
     assert len(calls)==2
