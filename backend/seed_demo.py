@@ -11,12 +11,12 @@ def main():
         if db.query(Event).filter_by(title='Fictional Demo: Meet Beyond').first():
             print('Demo already exists.'); return
         attendees = [
-            ('demo.alex@example.test','Alex Rivera','AI founder','AI education, agentic systems','I am building an AI education platform.','A developer interested in education','Product direction and education contacts'),
-            ('demo.devon@example.test','Devon Lee','AI developer','AI education, agentic systems','I develop agentic products.','Early-stage startup collaborations','AI engineering'),
-            ('demo.sam@example.test','Sam Patel','AI engineer','agentic systems, machine learning','I build AI assistants.','Technical peers','Machine learning experience'),
-            ('demo.jules@example.test','Jules Park','Game designer','behavior change, education','I design engaging learning experiences.','Education researchers','Game design'),
-            ('demo.morgan@example.test','Morgan Chen','Educator','student engagement, education','I study student engagement.','Game designers','Education research'),
-            ('demo.taylor@example.test','Taylor Stone','Accountant','tax, bookkeeping','I work on tax compliance.','Accounting peers','Accounting')]
+            ('demo.alex@example.com','Alex Rivera','AI founder','AI education, agentic systems','I am building an AI education platform.','A developer interested in education','Product direction and education contacts'),
+            ('demo.devon@example.com','Devon Lee','AI developer','AI education, agentic systems','I develop agentic products.','Early-stage startup collaborations','AI engineering'),
+            ('demo.sam@example.com','Sam Patel','AI engineer','agentic systems, machine learning','I build AI assistants.','Technical peers','Machine learning experience'),
+            ('demo.jules@example.com','Jules Park','Game designer','behavior change, education','I design engaging learning experiences.','Education researchers','Game design'),
+            ('demo.morgan@example.com','Morgan Chen','Educator','student engagement, education','I study student engagement.','Game designers','Education research'),
+            ('demo.taylor@example.com','Taylor Stone','Accountant','tax, bookkeeping','I work on tax compliance.','Accounting peers','Accounting')]
         users=[]
         for email,name,headline,interests,attending,seeking,offering in attendees:
             if db.query(User).filter_by(email=email).first(): raise RuntimeError('Demo email already exists; use a clean database')
@@ -33,6 +33,6 @@ def main():
         messages=[{'speaker':'requester','phase':'introduction','text':'Alex is looking for a developer for an AI education product.'},{'speaker':'recipient','phase':'discovery','text':'Devon offers AI engineering and is looking for a startup collaboration.'},{'speaker':'requester','phase':'spark','text':'That sounds like a practical fit for Alex’s project.'},{'speaker':'recipient','phase':'conclusion','text':'They could discuss the product and whether they want to work together.'}]
         db.add(V2Transcript(introduction_id=intro.id,data={'messages':messages,'highlights':['AI engineering meets an education startup'], 'summary':'Alex is seeking development help, and Devon offers AI engineering and wants startup collaboration.', 'outcome':'strong','model':'fictional-precomputed-demo','usage':{}},requester_decision='pending',recipient_decision='pending'))
         db.add(V2Job(kind='matching',event_id=event.id,user_id=users[0].id,target_id=0,state='complete',error=''))
-        db.commit();print('Fictional demo created. Sign in as demo.alex@example.test or demo.devon@example.test with password BeyondDemo2026!')
+        db.commit();print('Fictional demo created. Sign in as demo.alex@example.com or demo.devon@example.com with password BeyondDemo2026!')
 
 if __name__=='__main__': main()
