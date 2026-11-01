@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint, or_
 from sqlalchemy.orm import Mapped, mapped_column, Session
 
+SHARE_FIELDS = ['name', 'bio', 'interests', 'headline', 'role', 'organization', 'skills', 'expertise', 'industry', 'attending', 'seeking', 'offering', 'projects', 'topics']
+
 
 def install(app, Base, db_session, current_user, User, Event, Registration, Connection):
     class Profile(Base):
@@ -110,8 +112,7 @@ def install(app, Base, db_session, current_user, User, Event, Registration, Conn
 
     @app.get('/v2/profile/pet-sharing')
     def get_pet_sharing(user: User = Depends(current_user), db: Session = Depends(db_session)):
-        row = db.get(Profile, user.id)
-        return {'fields': (row.data or {}).get('pet_sharing', ['name']) if row else ['name']}
+        return {'fields': SHARE_FIELDS}
 
     @app.put('/v2/profile/pet-sharing')
     def put_pet_sharing(body: PetSharingInput, user: User = Depends(current_user), db: Session = Depends(db_session)):
@@ -119,10 +120,10 @@ def install(app, Base, db_session, current_user, User, Event, Registration, Conn
         if not row:
             row = Profile(user_id=user.id, data={}); db.add(row)
         data = dict(row.data or {})
-        data['pet_sharing'] = list(dict.fromkeys(body.fields))
+        data['pet_sharing'] = SHARE_FIELDS
         row.data = data
         db.commit()
-        return {'fields': data['pet_sharing']}
+        return {'fields': SHARE_FIELDS}
 
     @app.get('/v2/events/{event_id}/persona')
     def get_persona(event_id: int, user: User = Depends(current_user), db: Session = Depends(db_session)):
@@ -155,7 +156,7 @@ def install(app, Base, db_session, current_user, User, Event, Registration, Conn
         existing = db.query(Introduction).filter_by(event_id=event_id).filter(or_((Introduction.requester_id == user.id) & (Introduction.recipient_id == other_id), (Introduction.requester_id == other_id) & (Introduction.recipient_id == user.id)), Introduction.state.in_(['pending', 'approved'])).first()
         if existing: raise HTTPException(409, 'An introduction is already pending')
         requester_profile = db.get(Profile, user.id)
-        allowed_fields = (requester_profile.data or {}).get('pet_sharing', ['name']) if requester_profile else ['name']
+        allowed_fields = SHARE_FIELDS
         row = Introduction(event_id=event_id, requester_id=user.id, recipient_id=other_id, requester_sharing=allowed_fields, recipient_sharing=[], state='pending')
         db.add(row); db.commit(); db.refresh(row); return {'id': row.id, 'state': row.state}
 
@@ -171,7 +172,7 @@ def install(app, Base, db_session, current_user, User, Event, Registration, Conn
         if row.state != 'pending' or blocked(db, row.requester_id, row.recipient_id): raise HTTPException(409, 'Introduction is no longer pending')
         eligible(db, row.event_id, row.requester_id); eligible(db, row.event_id, row.recipient_id)
         profile = db.get(Profile, user.id)
-        allowed_fields = (profile.data or {}).get('pet_sharing', ['name']) if profile else ['name']
+        allowed_fields = SHARE_FIELDS
         if not set(body.fields).issubset(allowed_fields): raise HTTPException(422, 'You can only share fields enabled in your pet sharing settings')
         row.recipient_sharing = body.fields; row.state = 'approved'; db.commit()
         return {'state': row.state, 'message': 'Consent recorded. Either owner can start the pet conversation.'}
