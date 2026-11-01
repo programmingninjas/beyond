@@ -240,6 +240,44 @@
         },
         "label": "Join east table"
       }
+    ],
+    "seats": [
+      {
+        "id": "cafe_west_1",
+        "x": 520,
+        "y": 740,
+        "facing": "up"
+      },
+      {
+        "id": "cafe_west_2",
+        "x": 680,
+        "y": 740,
+        "facing": "up"
+      },
+      {
+        "id": "cafe_center_1",
+        "x": 880,
+        "y": 680,
+        "facing": "up"
+      },
+      {
+        "id": "cafe_center_2",
+        "x": 1040,
+        "y": 680,
+        "facing": "up"
+      },
+      {
+        "id": "cafe_east_1",
+        "x": 1240,
+        "y": 740,
+        "facing": "up"
+      },
+      {
+        "id": "cafe_east_2",
+        "x": 1400,
+        "y": 740,
+        "facing": "up"
+      }
     ]
   }
 }

@@ -2,3 +2,4 @@
 @media(prefers-reduced-motion:reduce){.world-portal,.world-object,.room-person{transition:none}.walking .character-legs i,.walking .character{animation:none!important}}
 .room-person span.ghost-follower{display:inline;background:transparent;border-radius:0;padding:0;white-space:normal;box-shadow:none}
 .world-debug-tabs{display:flex;flex-wrap:wrap;gap:8px;padding:10px;border:1px dashed #a9b9a4;border-radius:8px;background:#f6f8f2}.world-debug-tabs .button{padding:8px 12px;font-size:10px}
+.world-ground-fallback{position:absolute;inset:0;z-index:10;background:linear-gradient(160deg,#547166,#879e79 56%,#687d61)}.world-panel-copy{white-space:pre-line}

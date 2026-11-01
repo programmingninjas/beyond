@@ -44,13 +44,13 @@
       {
         "id": "from_plaza",
         "x": 960,
-        "y": 800,
+        "y": 740,
         "facing": "up"
       },
       {
         "id": "default",
         "x": 960,
-        "y": 800,
+        "y": 740,
         "facing": "up"
       }
     ],
@@ -108,20 +108,20 @@
         "id": "west-bridge",
         "points": [
           [
-            650,
-            460
+            640,
+            380
           ],
           [
-            900,
-            420
+            1010,
+            380
           ],
           [
-            930,
-            520
+            1010,
+            660
           ],
           [
-            680,
-            560
+            640,
+            660
           ]
         ]
       },
@@ -129,20 +129,20 @@
         "id": "south-bridge",
         "points": [
           [
-            880,
-            690
+            650,
+            650
           ],
           [
-            1050,
-            690
+            1200,
+            650
           ],
           [
-            1050,
-            910
+            1200,
+            900
           ],
           [
-            880,
-            910
+            650,
+            900
           ]
         ]
       }
@@ -224,6 +224,70 @@
         "y": 740,
         "width": 180,
         "height": 58
+      },
+      {
+        "id": "south-bridge-rail-west",
+        "shape": "aabb",
+        "x": 1020,
+        "y": 628,
+        "width": 180,
+        "height": 22
+      },
+      {
+        "id": "south-bridge-rail-east",
+        "shape": "aabb",
+        "x": 650,
+        "y": 900,
+        "width": 550,
+        "height": 22
+      },
+      {
+        "id": "stream-west-bank",
+        "shape": "aabb",
+        "x": 500,
+        "y": 480,
+        "width": 140,
+        "height": 90
+      },
+      {
+        "id": "stream-east-bank",
+        "shape": "aabb",
+        "x": 1010,
+        "y": 480,
+        "width": 300,
+        "height": 90
+      },
+      {
+        "id": "stream-south-west-bank",
+        "shape": "aabb",
+        "x": 500,
+        "y": 740,
+        "width": 140,
+        "height": 80
+      },
+      {
+        "id": "stream-south-east-bank",
+        "shape": "aabb",
+        "x": 1200,
+        "y": 740,
+        "width": 140,
+        "height": 80
+      },
+      {
+        "id": "west-bridge-rail-west",
+        "shape": "aabb",
+        "x": 618,
+        "y": 380,
+        "width": 22,
+        "height": 280
+      },
+      {
+        "id": "west-bridge-rail-east",
+        "shape": "aabb",
+        "x": 1010,
+        "y": 380,
+        "width": 22,
+        "height": 280
       }
     ],
     "portals": [
@@ -232,9 +296,9 @@
         "trigger": {
           "shape": "aabb",
           "x": 820,
-          "y": 920,
+          "y": 820,
           "width": 280,
-          "height": 90
+          "height": 180
         },
         "destination": {
           "roomId": "plaza",
@@ -290,8 +354,8 @@
       {
         "id": "garden_photo_spot",
         "anchor": {
-          "x": 1450,
-          "y": 570
+          "x": 1640,
+          "y": 520
         },
         "radius": 100,
         "priority": 30,
@@ -317,8 +381,8 @@
       {
         "id": "garden_bench_east_second",
         "anchor": {
-          "x": 1640,
-          "y": 750
+          "x": 1510,
+          "y": 800
         },
         "radius": 90,
         "priority": 50,
@@ -355,6 +419,44 @@
           "seatGroup": "garden_south"
         },
         "label": "Sit by the garden"
+      }
+    ],
+    "seats": [
+      {
+        "id": "garden_west_1",
+        "x": 300,
+        "y": 700,
+        "facing": "up"
+      },
+      {
+        "id": "garden_west_2",
+        "x": 400,
+        "y": 700,
+        "facing": "up"
+      },
+      {
+        "id": "garden_east_1",
+        "x": 1490,
+        "y": 760,
+        "facing": "up"
+      },
+      {
+        "id": "garden_east_2",
+        "x": 1590,
+        "y": 760,
+        "facing": "up"
+      },
+      {
+        "id": "garden_south_1",
+        "x": 530,
+        "y": 860,
+        "facing": "up"
+      },
+      {
+        "id": "garden_south_2",
+        "x": 630,
+        "y": 860,
+        "facing": "up"
       }
     ]
   }

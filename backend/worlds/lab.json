@@ -167,7 +167,7 @@
       {
         "id": "lab_table_main",
         "anchor": {
-          "x": 960,
+          "x": 800,
           "y": 700
         },
         "radius": 100,
@@ -191,7 +191,48 @@
           "seatGroup": "lab_round"
         },
         "label": "Join discussion table"
+      },
+      {
+        "id": "lab_table_main_second",
+        "anchor": {
+          "x": 1120,
+          "y": 700
+        },
+        "radius": 100,
+        "priority": 50,
+        "action": {
+          "type": "seat",
+          "seatGroup": "lab_main"
+        },
+        "label": "Join collaboration table"
       }
-    ]
+    ],
+    "seats": [
+      {
+        "id": "lab_main_1",
+        "x": 800,
+        "y": 700,
+        "facing": "up"
+      },
+      {
+        "id": "lab_main_2",
+        "x": 1120,
+        "y": 700,
+        "facing": "up"
+      },
+      {
+        "id": "lab_round_1",
+        "x": 1280,
+        "y": 840,
+        "facing": "up"
+      },
+      {
+        "id": "lab_round_2",
+        "x": 1440,
+        "y": 840,
+        "facing": "up"
+      }
+    ],
+    "description": "A warm workshop for sharing your current projects and exploring collaboration."
   }
 }

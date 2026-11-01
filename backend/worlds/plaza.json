@@ -50,19 +50,19 @@
       {
         "id": "from_cafe",
         "x": 960,
-        "y": 230,
+        "y": 262,
         "facing": "down"
       },
       {
         "id": "from_garden",
         "x": 1600,
-        "y": 700,
+        "y": 560,
         "facing": "left"
       },
       {
         "id": "from_arcade",
         "x": 320,
-        "y": 700,
+        "y": 560,
         "facing": "right"
       },
       {
@@ -84,61 +84,61 @@
         "shape": "circle",
         "x": 960,
         "y": 540,
-        "radius": 150
+        "radius": 155
       },
       {
         "id": "welcome-board",
         "shape": "aabb",
-        "x": 820,
+        "x": 520,
         "y": 110,
-        "width": 280,
+        "width": 240,
         "height": 76
       },
       {
         "id": "networking-kiosk",
         "shape": "aabb",
         "x": 190,
-        "y": 350,
+        "y": 230,
         "width": 230,
-        "height": 190
+        "height": 170
       },
       {
         "id": "event-info",
         "shape": "aabb",
         "x": 1500,
-        "y": 350,
+        "y": 230,
         "width": 230,
-        "height": 190
+        "height": 170
       },
       {
         "id": "bench-nw",
         "shape": "aabb",
-        "x": 590,
-        "y": 360,
+        "x": 480,
+        "y": 320,
         "width": 180,
         "height": 54
       },
       {
         "id": "bench-ne",
         "shape": "aabb",
-        "x": 1150,
-        "y": 360,
+        "x": 1260,
+        "y": 320,
         "width": 180,
         "height": 54
       },
       {
         "id": "bench-sw",
         "shape": "aabb",
-        "x": 590,
-        "y": 690,
+        "x": 500,
+        "y": 720,
         "width": 180,
         "height": 54
       },
       {
         "id": "bench-se",
         "shape": "aabb",
-        "x": 1150,
-        "y": 690,
+        "x": 1240,
+        "y": 720,
         "width": 180,
         "height": 54
       }
@@ -164,9 +164,9 @@
         "id": "plaza_to_garden",
         "trigger": {
           "shape": "aabb",
-          "x": 1714,
+          "x": 1628,
           "y": 430,
-          "width": 110,
+          "width": 220,
           "height": 220
         },
         "destination": {
@@ -182,7 +182,7 @@
           "shape": "aabb",
           "x": 96,
           "y": 430,
-          "width": 110,
+          "width": 220,
           "height": 220
         },
         "destination": {
@@ -227,8 +227,8 @@
       {
         "id": "plaza_welcome_board",
         "anchor": {
-          "x": 960,
-          "y": 220
+          "x": 640,
+          "y": 250
         },
         "radius": 120,
         "priority": 80,
@@ -255,8 +255,8 @@
       {
         "id": "plaza_bench_nw",
         "anchor": {
-          "x": 680,
-          "y": 445
+          "x": 570,
+          "y": 415
         },
         "radius": 86,
         "priority": 40,
@@ -269,8 +269,8 @@
       {
         "id": "plaza_bench_ne",
         "anchor": {
-          "x": 1240,
-          "y": 445
+          "x": 1350,
+          "y": 415
         },
         "radius": 86,
         "priority": 40,
@@ -279,6 +279,84 @@
           "seatGroup": "plaza_ne"
         },
         "label": "Sit on bench"
+      },
+      {
+        "id": "plaza_bench_sw",
+        "anchor": {
+          "x": 590,
+          "y": 815
+        },
+        "radius": 86,
+        "priority": 40,
+        "action": {
+          "type": "seat",
+          "seatGroup": "plaza_sw"
+        },
+        "label": "Sit on bench"
+      },
+      {
+        "id": "plaza_bench_se",
+        "anchor": {
+          "x": 1330,
+          "y": 815
+        },
+        "radius": 86,
+        "priority": 40,
+        "action": {
+          "type": "seat",
+          "seatGroup": "plaza_se"
+        },
+        "label": "Sit on bench"
+      }
+    ],
+    "seats": [
+      {
+        "id": "plaza_nw_1",
+        "x": 520,
+        "y": 450,
+        "facing": "up"
+      },
+      {
+        "id": "plaza_nw_2",
+        "x": 620,
+        "y": 450,
+        "facing": "up"
+      },
+      {
+        "id": "plaza_ne_1",
+        "x": 1300,
+        "y": 450,
+        "facing": "up"
+      },
+      {
+        "id": "plaza_ne_2",
+        "x": 1400,
+        "y": 450,
+        "facing": "up"
+      },
+      {
+        "id": "plaza_sw_1",
+        "x": 540,
+        "y": 840,
+        "facing": "up"
+      },
+      {
+        "id": "plaza_sw_2",
+        "x": 640,
+        "y": 840,
+        "facing": "up"
+      },
+      {
+        "id": "plaza_se_1",
+        "x": 1280,
+        "y": 840,
+        "facing": "up"
+      },
+      {
+        "id": "plaza_se_2",
+        "x": 1380,
+        "y": 840,
+        "facing": "up"
       }
     ]
   }

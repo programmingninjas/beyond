@@ -33,7 +33,7 @@ def svg(room: str, layer: str, colors: tuple[str, ...]) -> str:
         elif room == 'cafe':
             shape = f'<rect x="635" y="110" width="650" height="190" rx="60" fill="{deep}" stroke="{accent}" stroke-width="24"/><g fill="{light}" stroke="{accent}" stroke-width="18"><circle cx="600" cy="590" r="118"/><circle cx="960" cy="530" r="124"/><circle cx="1320" cy="590" r="118"/></g><g fill="{deep}"><rect x="150" y="360" width="290" height="140" rx="60"/><rect x="1480" y="360" width="290" height="140" rx="60"/></g>'
         elif room == 'garden':
-            shape = f'<path d="M665 460 Q900 325 1160 400 L1270 540 Q1120 740 960 765 Q770 700 665 560Z" fill="{deep}" stroke="{accent}" stroke-width="24"/><path d="M710 520Q950 445 1210 520" fill="none" stroke="{light}" stroke-width="18" opacity=".6"/><g fill="{deep}" stroke="{light}" stroke-width="18"><circle cx="350" cy="250" r="84"/><circle cx="1540" cy="365" r="130"/><circle cx="420" cy="815" r="75"/></g>'
+            shape = f'<path d="M665 460 Q900 325 1160 400 L1270 540 Q1120 740 960 765 Q770 700 665 560Z" fill="{deep}" stroke="{accent}" stroke-width="24"/><path d="M700 440 C825 430 925 490 1020 500 S1190 490 1285 530 M1040 680 C1020 760 980 830 970 930" fill="none" stroke="#5aa6b2" stroke-width="72" opacity=".78"/><g fill="{deep}" stroke="{light}" stroke-width="18"><circle cx="350" cy="250" r="84"/><circle cx="1540" cy="365" r="130"/><circle cx="420" cy="815" r="75"/></g><g fill="{accent}" stroke="{light}" stroke-width="14"><path d="M640 400h370v240H640z"/><path d="M650 650h550v250H650z"/></g><g stroke="{deep}" stroke-width="8" opacity=".7"><path d="M680 410v220m48-220v220m48-220v220m48-220v220m48-220v220m48-220v220m48-220v220m48-220v220"/><path d="M680 680v220m48-220v220m48-220v220m48-220v220m48-220v220m48-220v220m48-220v220m48-220v220m48-220v220m48-220v220m48-220v220"/></g>'
         elif room == 'arcade':
             shape = f'<g fill="{deep}" stroke="{accent}" stroke-width="18"><rect x="135" y="230" width="270" height="490" rx="40"/><rect x="1510" y="230" width="270" height="420" rx="40"/><circle cx="980" cy="590" r="160"/><rect x="1190" y="130" width="320" height="90" rx="22"/><rect x="1280" y="710" width="250" height="115" rx="24"/></g><circle cx="690" cy="370" r="170" fill="{accent}" opacity=".14"/>'
         else:
@@ -59,6 +59,7 @@ def main() -> None:
         if not any(a['id']==f'cafe_table_{table}_second' for a in cafe['interactions']):
             cafe['interactions'].append({'id':f'cafe_table_{table}_second','anchor':{'x':seatx,'y':y},'radius':90,'priority':50,'action':{'type':'seat','seatGroup':f'cafe_{table}'},'label':f'Join {table} table'})
     garden=next(r for r in data['rooms'] if r['id']=='garden')
+    next(p for p in garden['portals'] if p['id']=='garden_to_plaza')['trigger'].update({'x':820,'y':820,'width':280,'height':180})
     if not any(c['id']=='south-bench' for c in garden['colliders']): garden['colliders'].append({'id':'south-bench','shape':'aabb','x':490,'y':740,'width':180,'height':58})
     garden_actions=[
       {'id':'garden_bench_west_second','anchor':{'x':440,'y':680},'radius':90,'priority':50,'action':{'type':'seat','seatGroup':'garden_west'},'label':'Sit by the garden'},
@@ -69,10 +70,69 @@ def main() -> None:
     known={a['id'] for a in garden['interactions']}
     garden['interactions'].extend(a for a in garden_actions if a['id'] not in known)
     plaza=next(r for r in data['rooms'] if r['id']=='plaza')
-    spawn_tuning={'from_garden':(1600,700),'from_arcade':(320,700)}
+    next(c for c in plaza['colliders'] if c['id']=='fountain')['radius']=155
+    plaza_colliders={
+      'welcome-board':{'shape':'aabb','x':520,'y':110,'width':240,'height':76},
+      'networking-kiosk':{'shape':'aabb','x':190,'y':230,'width':230,'height':170},
+      'event-info':{'shape':'aabb','x':1500,'y':230,'width':230,'height':170},
+      'bench-nw':{'shape':'aabb','x':480,'y':320,'width':180,'height':54},
+      'bench-ne':{'shape':'aabb','x':1260,'y':320,'width':180,'height':54},
+      'bench-sw':{'shape':'aabb','x':500,'y':720,'width':180,'height':54},
+      'bench-se':{'shape':'aabb','x':1240,'y':720,'width':180,'height':54},
+    }
+    for collider in plaza['colliders']:
+        if collider['id'] in plaza_colliders: collider.update(plaza_colliders[collider['id']])
+    portal_tuning={'plaza_to_garden':{'x':1628,'y':430,'width':220,'height':220},'plaza_to_arcade':{'x':96,'y':430,'width':220,'height':220}}
+    for portal in plaza['portals']:
+        if portal['id'] in portal_tuning: portal['trigger'].update(portal_tuning[portal['id']])
+    spawn_tuning={'from_cafe':(960,262),'from_garden':(1600,560),'from_arcade':(320,560)}
     for spawn in plaza['spawns']:
         if spawn['id'] in spawn_tuning: spawn['x'],spawn['y']=spawn_tuning[spawn['id']]
-    for rid,xy,facing in (('cafe',(960,790),'up'),('garden',(960,800),'up'),('arcade',(470,540),'right'),('lab',(1530,760),'up')):
+    plaza_anchors={'plaza_welcome_board':(640,250),'plaza_bench_nw':(570,415),'plaza_bench_ne':(1350,415),'plaza_bench_sw':(590,815),'plaza_bench_se':(1330,815)}
+    for interaction in plaza['interactions']:
+        if interaction['id'] in plaza_anchors: interaction['anchor']={'x':plaza_anchors[interaction['id']][0],'y':plaza_anchors[interaction['id']][1]}
+    for bench,sx,sy in (('sw',590,815),('se',1330,815)):
+        iid=f'plaza_bench_{bench}'
+        if not any(a['id']==iid for a in plaza['interactions']):
+            plaza['interactions'].append({'id':iid,'anchor':{'x':sx,'y':sy},'radius':86,'priority':40,'action':{'type':'seat','seatGroup':f'plaza_{bench}'},'label':'Sit on bench'})
+    garden_polys={'west-bridge':[[640,380],[1010,380],[1010,660],[640,660]],'south-bridge':[[650,650],[1200,650],[1200,900],[650,900]]}
+    for polygon in garden.get('walkablePolygons',[]):
+        if polygon['id'] in garden_polys: polygon['points']=garden_polys[polygon['id']]
+    bridge_colliders=[
+      {'id':'west-bridge-rail-west','shape':'aabb','x':618,'y':380,'width':22,'height':280},
+      {'id':'west-bridge-rail-east','shape':'aabb','x':1010,'y':380,'width':22,'height':280},
+      {'id':'south-bridge-rail-west','shape':'aabb','x':1020,'y':628,'width':180,'height':22},
+      {'id':'south-bridge-rail-east','shape':'aabb','x':650,'y':900,'width':550,'height':22},
+      {'id':'stream-west-bank','shape':'aabb','x':500,'y':480,'width':140,'height':90},
+      {'id':'stream-east-bank','shape':'aabb','x':1010,'y':480,'width':300,'height':90},
+      {'id':'stream-south-west-bank','shape':'aabb','x':500,'y':740,'width':140,'height':80},
+      {'id':'stream-south-east-bank','shape':'aabb','x':1200,'y':740,'width':140,'height':80},
+    ]
+    known_colliders={c['id'] for c in garden['colliders']}
+    for collider in garden['colliders']:
+        tuned=next((candidate for candidate in bridge_colliders if candidate['id']==collider['id']),None)
+        if tuned: collider.update(tuned)
+    garden['colliders']=[c for c in garden['colliders'] if c['id'] not in {'west-bridge-rail-north','west-bridge-rail-south','south-bridge-rail-north','south-bridge-rail-south'}]
+    garden['colliders'].extend(c for c in bridge_colliders if c['id'] not in known_colliders)
+    for interaction in garden['interactions']:
+        if interaction['id']=='garden_bench_west_second': interaction['anchor']={'x':440,'y':680}
+        elif interaction['id']=='garden_bench_east_second': interaction['anchor']={'x':1510,'y':800}
+        elif interaction['id']=='garden_photo_spot': interaction['anchor']={'x':1640,'y':520}
+    lab=next(r for r in data['rooms'] if r['id']=='lab')
+    lab['description']='A warm workshop for sharing your current projects and exploring collaboration.'
+    if not any(a['id']=='lab_table_main_second' for a in lab['interactions']):
+        lab['interactions'].append({'id':'lab_table_main_second','anchor':{'x':1120,'y':700},'radius':100,'priority':50,'action':{'type':'seat','seatGroup':'lab_main'},'label':'Join collaboration table'})
+    for interaction in lab['interactions']:
+        if interaction['id']=='lab_table_main': interaction['anchor']={'x':800,'y':700}
+    seats={
+      'plaza': [('plaza_nw_1',520,450,'up'),('plaza_nw_2',620,450,'up'),('plaza_ne_1',1300,450,'up'),('plaza_ne_2',1400,450,'up'),('plaza_sw_1',540,840,'up'),('plaza_sw_2',640,840,'up'),('plaza_se_1',1280,840,'up'),('plaza_se_2',1380,840,'up')],
+      'cafe': [('cafe_west_1',520,740,'up'),('cafe_west_2',680,740,'up'),('cafe_center_1',880,680,'up'),('cafe_center_2',1040,680,'up'),('cafe_east_1',1240,740,'up'),('cafe_east_2',1400,740,'up')],
+      'garden': [('garden_west_1',300,700,'up'),('garden_west_2',400,700,'up'),('garden_east_1',1490,760,'up'),('garden_east_2',1590,760,'up'),('garden_south_1',530,860,'up'),('garden_south_2',630,860,'up')],
+      'lab': [('lab_main_1',800,700,'up'),('lab_main_2',1120,700,'up'),('lab_round_1',1280,840,'up'),('lab_round_2',1440,840,'up')],
+    }
+    for rid, room in ((r['id'],r) for r in data['rooms']):
+        room['seats']=[{'id':sid,'x':x,'y':y,'facing':facing} for sid,x,y,facing in seats.get(rid,[])]
+    for rid,xy,facing in (('cafe',(960,790),'up'),('garden',(960,740),'up'),('arcade',(470,540),'right'),('lab',(1530,760),'up')):
         room=next(r for r in data['rooms'] if r['id']==rid)
         for spawn in room['spawns']:
             if spawn['id'] in ('default','from_plaza'): spawn['x'],spawn['y'],spawn['facing']=*xy,facing

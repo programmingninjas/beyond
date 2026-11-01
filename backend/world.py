@@ -100,6 +100,35 @@ def swept_move(room: dict, old: tuple[float, float], proposed: tuple[float, floa
     return x, y
 
 
+def _reachable_grid(room: dict, start: tuple[float, float], cell: int = 24) -> set[tuple[int, int]]:
+    """Flood-fill walkable cell centers from the room entry spawn."""
+    cols, rows = math.ceil(WIDTH / cell), math.ceil(HEIGHT / cell)
+    valid = lambda gx, gy: not blocked(room, min(WIDTH - RADIUS, gx * cell + cell / 2), min(HEIGHT - RADIUS, gy * cell + cell / 2))
+    sx, sy = round((start[0] - cell / 2) / cell), round((start[1] - cell / 2) / cell)
+    candidates = sorted(((x, y) for y in range(max(0, sy-3), min(rows, sy+4)) for x in range(max(0, sx-3), min(cols, sx+4)) if valid(x, y)), key=lambda p: math.hypot((p[0]+.5)*cell-start[0], (p[1]+.5)*cell-start[1]))
+    if not candidates:
+        raise ValueError(f"{room['id']}: entry spawn has no reachable walkable area")
+    seen = {candidates[0]}
+    queue = [candidates[0]]
+    while queue:
+        x, y = queue.pop()
+        for nxt in ((x+1,y),(x-1,y),(x,y+1),(x,y-1)):
+            if 0 <= nxt[0] < cols and 0 <= nxt[1] < rows and nxt not in seen and valid(*nxt):
+                seen.add(nxt); queue.append(nxt)
+    return seen
+
+
+def _grid_target_reachable(grid: set[tuple[int, int]], x: float, y: float, cell: int = 24, radius: float = 0) -> bool:
+    gx, gy = int(x // cell), int(y // cell)
+    reach = math.ceil(radius / cell)
+    tolerance = cell * math.sqrt(2) / 2
+    return any((gx+dx, gy+dy) in grid and math.hypot((gx+dx+.5)*cell-x, (gy+dy+.5)*cell-y) <= radius + tolerance for dx in range(-reach-1, reach+2) for dy in range(-reach-1, reach+2))
+
+
+def _grid_reaches_shape(grid: set[tuple[int, int]], shape: dict, radius: float = 0, cell: int = 24) -> bool:
+    return any(shape_contains(shape, gx*cell+cell/2, gy*cell+cell/2, radius) for gx, gy in grid)
+
+
 def _validate_room(room: dict, all_rooms: dict[str, dict]) -> None:
     rid = room.get('id')
     if not isinstance(rid, str) or not rid:
@@ -144,6 +173,33 @@ def _validate_room(room: dict, all_rooms: dict[str, dict]) -> None:
         a = interaction.get('anchor', {})
         if not (0 <= a.get('x', -1) <= WIDTH and 0 <= a.get('y', -1) <= HEIGHT and interaction.get('radius', 0) > 0):
             raise ValueError(f"{rid}: invalid interaction anchor")
+        if blocked(room, a['x'], a['y']):
+            raise ValueError(f"{rid}: interaction anchor overlaps blocked geometry: {interaction['id']}")
+    seats = room.get('seats', [])
+    seat_ids = [seat.get('id') for seat in seats]
+    if len(seat_ids) != len(set(seat_ids)):
+        raise ValueError(f'{rid}: duplicate seat id')
+    for seat in seats:
+        if not (0 <= seat.get('x', -1) <= WIDTH and 0 <= seat.get('y', -1) <= HEIGHT) or blocked(room, seat['x'], seat['y']):
+            raise ValueError(f"{rid}: seat overlaps blocked geometry: {seat.get('id')}")
+    for portal in room.get('portals', []):
+        trigger = portal['trigger']
+        clear_width = max(trigger.get('width', 0), trigger.get('height', 0))
+        if clear_width < 220:
+            raise ValueError(f"{rid}: portal trigger is narrower than 220 units: {portal['id']}")
+    entry = next((s for s in room['spawns'] if s['id'] in ('default', 'from_plaza')), room['spawns'][0])
+    reachable = _reachable_grid(room, (entry['x'], entry['y']))
+    for portal in room.get('portals', []):
+        t = portal['trigger']; cx, cy = t['x'] + t.get('width', 0)/2, t['y'] + t.get('height', 0)/2
+        if not _grid_reaches_shape(reachable, t):
+            raise ValueError(f"{rid}: portal trigger has no reachable threshold: {portal['id']}")
+    for interaction in room.get('interactions', []):
+        a = interaction['anchor']
+        if not _grid_target_reachable(reachable, a['x'], a['y'], radius=interaction['radius']):
+            raise ValueError(f"{rid}: interaction is unreachable: {interaction['id']}")
+    for seat in seats:
+        if not _grid_target_reachable(reachable, seat['x'], seat['y'], radius=64):
+            raise ValueError(f"{rid}: seat is unreachable: {seat['id']}")
 
 
 def load_worlds() -> dict[str, dict[str, Any]]:
